@@ -121,11 +121,13 @@ function dataBR(s){const p=String(s).split('-');return p.length===3?p[2]+'/'+p[1
 function itens(){
   return [
     ...db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})),
-    ...db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,dia:d.dia,paga:!!d.paga}))
+    ...db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'}))
   ].sort((a,b)=>a.dia-b.dia);
 }
-function totalMes(){return itens().reduce((s,i)=>s+i.valor,0);}
-function falta(){return itens().filter(i=>!i.paga).reduce((s,i)=>s+i.valor,0);}
+function totalMes(){return itens().reduce((s,i)=>s+(i.kind==='divida'&&i.periodicidade==='anual'?0:i.valor),0);}
+function falta(){return itens().filter(i=>!i.paga).reduce((s,i)=>s+(i.kind==='divida'&&i.periodicidade==='anual'?0:i.valor),0);}
+function parcelasMensais(){return db.dividas.reduce((s,d)=>s+(d.periodicidade==='anual'?0:d.parcela),0);}
+function parcelasAnuais(){return db.dividas.reduce((s,d)=>s+(d.periodicidade==='anual'?d.parcela:0),0);}
 function totalDividas(){return db.dividas.reduce((s,d)=>s+d.saldo,0);}
 function parcelasDividasMes(){return db.dividas.reduce((s,d)=>s+d.parcela,0);}
 function ifoodLiquido(){return db.ifood.reduce((s,r)=>s+(r.bruto-r.moto),0);}
@@ -164,7 +166,7 @@ function linhaDivida(d){
   const p=progressoDivida(d);
   return `<div class="item ${d.paga?'paid':''}">
     <button class="pagar ${d.paga?'on':''}" type="button" data-act="toggle" data-kind="divida" data-id="${d.id}" aria-pressed="${d.paga}"><span class="box">${d.paga?'✓':''}</span>Pago</button>
-    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>Parcela ${brl(d.parcela)}</p></div>
+    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>Parcela ${brl(d.parcela)} · ${d.periodicidade==='anual'?'anual':'mensal'}</p></div>
     <button class="del" type="button" data-act="del" data-kind="divida" data-id="${d.id}" aria-label="Apagar">Apagar</button>
     <div style="width:100%;margin-top:8px">
       <div class="topo"><span>Já pagou ${p.pct}% de ${brl(p.total)}</span><span>Falta ${brl(d.saldo)}</span></div>
@@ -195,7 +197,7 @@ function renderHome(){
       <div class="tile bad"><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p></div>
       <div class="tile warn"><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar nos financiamentos e dívidas.</p></div>
     </div>
-    <div class="card"><div class="row between"><span class="lbl">Parcelas de dívidas neste mês</span><strong>${brl(parcelasDividasMes())}</strong></div><p class="sub">No orçamento mensal entra somente a parcela, não o valor total do financiamento.</p></div>
+    <div class="card"><div class="row between"><span class="lbl">Parcelas mensais</span><strong>${brl(parcelasMensais())}</strong></div><div class="row between" style="margin-top:8px"><span class="lbl">Parcelas anuais cadastradas</span><strong>${brl(parcelasAnuais())}</strong></div><p class="sub">No orçamento mensal entram somente as dívidas marcadas como mensais.</p></div>
     <div class="tile ${sobra()<0?'bad':'ok'}"><p class="lbl">Sobra do mês</p><p class="val2">${brl(sobra())}</p><p class="sub">Renda recebida menos todas as contas e parcelas do mês.</p></div>
     <div class="card"><div class="row between"><span class="lbl">Contas do mês já pagas</span><span>${pctPago()}%</span></div><div class="bar"><div style="width:${pctPago()}%"></div></div></div>
     <h2>Contas e parcelas do mês</h2>
@@ -254,7 +256,8 @@ function renderDividas(){
       <input name="nome" placeholder="Nome (ex.: Moto, Empréstimo, Cartão Visa)" required>
       <label class="campo">Valor total original da dívida (R$)<input name="total" inputmode="decimal" required></label>
       <label class="campo">Saldo total que ainda falta pagar (R$)<input name="saldo" inputmode="decimal" required></label>
-      <label class="campo">Parcela mensal ou fatura do mês (R$)<input name="parcela" inputmode="decimal" required></label>
+      <label class="campo">Periodicidade<select name="periodicidade"><option value="mensal">Mensal</option><option value="anual">Anual</option></select></label>
+      <label class="campo">Valor da parcela mensal ou anual (R$)<input name="parcela" inputmode="decimal" required></label>
       <label class="campo">Dia do vencimento (1 a 31)<input name="dia" inputmode="numeric" required></label>
       <button class="btn" type="submit">Adicionar dívida</button>
     </form></div>
@@ -312,7 +315,7 @@ document.addEventListener('submit',e=>{
   } else if(tipo==='divida'){
     const saldo=num(d.get('saldo'));
     const total=num(d.get('total'))||saldo;
-    db.dividas.push({id:uid(),nome:String(d.get('nome')).trim(),total:total,parcela:num(d.get('parcela')),saldo:saldo,dia:diaValido(d.get('dia')),paga:false});
+    db.dividas.push({id:uid(),nome:String(d.get('nome')).trim(),total:total,parcela:num(d.get('parcela')),periodicidade:String(d.get('periodicidade')||'mensal'),saldo:saldo,dia:diaValido(d.get('dia')),paga:false});
   } else if(tipo==='saldo'){
     const it=db.dividas.find(x=>x.id===f.dataset.id);
     if(it){
