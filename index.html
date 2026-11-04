@@ -321,6 +321,7 @@ document.addEventListener('submit',e=>{
     if(it){
       it.saldo=num(d.get('saldo'));
       it.total=num(d.get('total'))||it.total||it.saldo;
+      it.periodicidade=String(d.get('periodicidade')||it.periodicidade||'mensal');
     }
   }
   salvarTudo();
