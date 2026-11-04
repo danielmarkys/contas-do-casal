@@ -127,6 +127,7 @@ function itens(){
 function totalMes(){return itens().reduce((s,i)=>s+i.valor,0);}
 function falta(){return itens().filter(i=>!i.paga).reduce((s,i)=>s+i.valor,0);}
 function totalDividas(){return db.dividas.reduce((s,d)=>s+d.saldo,0);}
+function parcelasDividasMes(){return db.dividas.reduce((s,d)=>s+d.parcela,0);}
 function ifoodLiquido(){return db.ifood.reduce((s,r)=>s+(r.bruto-r.moto),0);}
 function rendaRecebida(){return db.salario+db.esposa+ifoodLiquido();}
 function sobra(){return rendaRecebida()-totalMes();}
@@ -171,7 +172,7 @@ function linhaDivida(d){
     </div>
     <form data-form="saldo" data-id="${d.id}" style="grid-template-columns:1fr 1fr;width:100%;margin:8px 0 0">
       <label class="campo">Valor original (R$)<input name="total" inputmode="decimal" value="${p.total}" required></label>
-      <label class="campo">Quanto deve agora (R$)<input name="saldo" inputmode="decimal" value="${d.saldo}" required></label>
+      <label class="campo">Saldo total que ainda falta pagar (R$)<input name="saldo" inputmode="decimal" value="${d.saldo}" required></label>
       <button class="btn small" type="submit" style="grid-column:1 / -1">Atualizar</button>
     </form>
   </div>`;
@@ -192,8 +193,9 @@ function renderHome(){
     <div class="card"><p class="lbl">Dinheiro em conta</p><p class="val">${brl(db.saldo)}</p><p class="sub">Total de todos os bancos e carteira. Você atualiza na aba Renda.</p></div>
     <div class="grid2">
       <div class="tile bad"><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p></div>
-      <div class="tile warn"><p class="lbl">Dívidas (saldo total)</p><p class="val2">${brl(totalDividas())}</p></div>
+      <div class="tile warn"><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar nos financiamentos e dívidas.</p></div>
     </div>
+    <div class="card"><div class="row between"><span class="lbl">Parcelas de dívidas neste mês</span><strong>${brl(parcelasDividasMes())}</strong></div><p class="sub">No orçamento mensal entra somente a parcela, não o valor total do financiamento.</p></div>
     <div class="tile ${sobra()<0?'bad':'ok'}"><p class="lbl">Sobra do mês</p><p class="val2">${brl(sobra())}</p><p class="sub">Renda recebida menos todas as contas e parcelas do mês.</p></div>
     <div class="card"><div class="row between"><span class="lbl">Contas do mês já pagas</span><span>${pctPago()}%</span></div><div class="bar"><div style="width:${pctPago()}%"></div></div></div>
     <h2>Contas e parcelas do mês</h2>
@@ -250,9 +252,9 @@ function renderDividas(){
     <h2>Adicionar dívida</h2>
     <div class="card"><form data-form="divida">
       <input name="nome" placeholder="Nome (ex.: Moto, Empréstimo, Cartão Visa)" required>
-      <label class="campo">Valor original (quanto pegou, R$)<input name="total" inputmode="decimal" required></label>
-      <label class="campo">Quanto deve agora (R$)<input name="saldo" inputmode="decimal" required></label>
-      <label class="campo">Valor da parcela ou fatura (R$)<input name="parcela" inputmode="decimal" required></label>
+      <label class="campo">Valor total original da dívida (R$)<input name="total" inputmode="decimal" required></label>
+      <label class="campo">Saldo total que ainda falta pagar (R$)<input name="saldo" inputmode="decimal" required></label>
+      <label class="campo">Parcela mensal ou fatura do mês (R$)<input name="parcela" inputmode="decimal" required></label>
       <label class="campo">Dia do vencimento (1 a 31)<input name="dia" inputmode="numeric" required></label>
       <button class="btn" type="submit">Adicionar dívida</button>
     </form></div>
