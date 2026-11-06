@@ -18,16 +18,17 @@
 body{margin:0 auto;max-width:560px;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1{font-size:22px;margin:0 0 12px;font-weight:600}
 h2{font-size:17px;margin:20px 0 8px;font-weight:600}
-.tabs{display:flex;gap:6px;margin-bottom:14px}
-.tabs button{flex:1;min-width:0;padding:10px 4px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tabs button{flex:1 1 0;min-width:0;padding:10px 4px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
 .tile{border-radius:14px;padding:14px;margin-bottom:10px;min-width:0}
 .bad{background:var(--bad-bg);color:var(--bad)}
 .warn{background:var(--warn-bg);color:var(--warn)}
+.soon{background:#fff4c2;color:#8a5a0b}
 .ok{background:var(--ok-bg);color:var(--ok)}
 .lbl{margin:0;font-size:13px;color:var(--muted)}
-.bad .lbl,.warn .lbl,.ok .lbl{color:inherit}
+.bad .lbl,.warn .lbl,.soon .lbl,.ok .lbl{color:inherit}
 .val{margin:4px 0 0;font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
 .val2{margin:4px 0 0;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
 .sub{margin:6px 0 0;font-size:12px;color:var(--muted)}
@@ -46,9 +47,9 @@ input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line)
 .item.paid{background:var(--ok-bg);border-radius:10px;padding:10px;border-bottom:none;margin-bottom:6px}
 .item.paid .nome,.item.paid .valor{color:var(--ok)}
 .item .info{flex:1;min-width:0}
-.item .nome{margin:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.item .det{margin:2px 0 0;font-size:13px;color:var(--muted)}
-.item .valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.item .nome{margin:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.item .det{margin:2px 0 0;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.item .valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;margin-left:auto}
 .pill{font-size:12px;padding:2px 8px;border-radius:8px;white-space:nowrap;margin-right:4px}
 .neu{background:var(--line);color:var(--muted)}
 .pagar{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--fg);font:inherit;font-size:14px;cursor:pointer;padding:4px 2px;flex:none}
@@ -59,6 +60,8 @@ input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line)
 .del{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px}
 .empty{color:var(--muted);font-size:14px;margin:8px 0}
 .campo{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);width:100%}
+@media (max-width:400px){.item{gap:7px}.item .info{flex:1 1 120px;min-width:0}.item .valor{flex-basis:100%;text-align:right;margin-left:0;padding-right:2px}.item .det{line-height:1.35}.tabs button{flex-basis:calc(33.333% - 6px)}}
 </style>
 
 <div id="auth" hidden>
@@ -80,15 +83,17 @@ input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line)
 <button type="button" data-tab="renda" aria-pressed="false">Renda</button>
 <button type="button" data-tab="contas" aria-pressed="false">Contas</button>
 <button type="button" data-tab="dividas" aria-pressed="false">Dívidas</button>
+<button type="button" data-tab="historico" aria-pressed="false">Histórico</button>
 </div>
 <section id="home"></section>
 <section id="renda" hidden></section>
 <section id="contas" hidden></section>
 <section id="dividas" hidden></section>
+<section id="historico" hidden></section>
 
 <script>
 const KEY='contas-casal-basico-v1';
-const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[]};
+const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[],historico:[],mesAtual:'',descontos:{}};
 let db=load();
 let armado=false;
 let aba='home';
@@ -113,16 +118,23 @@ function num(v){
 function brl(n){return 'R$ '+(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function hoje(){const d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
-function diaHoje(){return new Date().getDate();}
+function brasiliaPartes(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const o={};p.forEach(x=>{if(x.type!=='literal')o[x.type]=x.value;});return o;}
+function hoje(){const p=brasiliaPartes();return `${p.year}-${p.month}-${p.day}`;}
+function mesAtual(){return hoje().slice(0,7);}
+function diaHoje(){return Number(brasiliaPartes().day);}
+function diasNoMes(ano,mes){return new Date(Date.UTC(Number(ano),Number(mes),0)).getUTCDate();}
+function diaVencimento(dia){const p=brasiliaPartes();return Math.min(diaValido(dia),diasNoMes(p.year,p.month));}
 function diaValido(v){const n=parseInt(v,10);return n>=1&&n<=31?n:1;}
-function dataBR(s){const p=String(s).split('-');return p.length===3?p[2]+'/'+p[1]:s;}
+function dataBR(s){const p=String(s).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:s;}
+function prazo(dia){const diff=diaVencimento(dia)-diaHoje();if(diff<0)return `Vencida há ${Math.abs(diff)} ${Math.abs(diff)===1?'dia':'dias'}`;if(diff===0)return 'Vence hoje';if(diff===1)return 'Vence amanhã';return `Vence em ${diff} dias`;}
+function classePrazo(dia){const diff=diaVencimento(dia)-diaHoje();if(diff<0)return 'bad';if(diff<=1)return 'warn';if(diff<=7)return 'warn';return 'neu';}
 
+function ordenarItens(lista){return lista.slice().sort((a,b)=>{if(!!a.paga!==!!b.paga)return a.paga?1:-1;const da=diaVencimento(a.dia)-diaHoje(),dbb=diaVencimento(b.dia)-diaHoje();return da-dbb||String(a.nome).localeCompare(String(b.nome),'pt-BR');});}
 function itens(){
-  return [
+  return ordenarItens([
     ...db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})),
     ...db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'}))
-  ].sort((a,b)=>a.dia-b.dia);
+  ]);
 }
 function totalMes(){return itens().reduce((s,i)=>s+(i.kind==='divida'&&i.periodicidade==='anual'?0:i.valor),0);}
 function falta(){return itens().filter(i=>!i.paga).reduce((s,i)=>s+(i.kind==='divida'&&i.periodicidade==='anual'?0:i.valor),0);}
@@ -141,14 +153,7 @@ function progressoDivida(d){
   return {total,pct};
 }
 
-function status(i){
-  if(i.paga) return ['Paga','ok'];
-  const diff=i.dia-diaHoje();
-  if(diff<0) return ['Vencida','bad'];
-  if(diff===0) return ['Vence hoje','warn'];
-  if(diff<=3) return ['Vence em '+diff+(diff===1?' dia':' dias'),'warn'];
-  return ['Vence dia '+i.dia,'neu'];
-}
+function status(i){if(i.paga)return ['Paga','ok'];return [prazo(i.dia),classePrazo(i.dia)];}
 
 function linha(i){
   const st=status(i);
@@ -191,8 +196,11 @@ function listaIfood(){
 
 function renderHome(){
   const lista=itens();
+  const proximos=lista.filter(i=>!i.paga).slice(0,3);
+  const proximosHtml=proximos.length?proximos.map(i=>`<div class="item"><div class="info"><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${classePrazo(i.dia)}">${prazo(i.dia)}</span>${brl(i.valor)}</p></div><span class="valor">${brl(i.valor)}</span></div>`).join(''):'<p class="empty ok">Tudo pago neste mês</p>';
   document.getElementById('home').innerHTML=`
     <div class="card"><p class="lbl">Dinheiro em conta</p><p class="val">${brl(db.saldo)}</p><p class="sub">Total de todos os bancos e carteira. Você atualiza na aba Renda.</p></div>
+    <div class="card"><h2 style="margin-top:0">Próximos vencimentos</h2>${proximosHtml}</div>
     <div class="grid2">
       <div class="tile bad"><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p></div>
       <div class="tile warn"><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar nos financiamentos e dívidas.</p></div>
@@ -234,7 +242,7 @@ function renderRenda(){
 }
 
 function renderContas(){
-  const contas=db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})).sort((a,b)=>a.dia-b.dia);
+  const contas=ordenarItens(db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})));
   document.getElementById('contas').innerHTML=`
     <h2>Adicionar conta</h2>
     <div class="card"><form data-form="conta">
@@ -249,7 +257,7 @@ function renderContas(){
 }
 
 function renderDividas(){
-  const dv=db.dividas.slice().sort((a,b)=>a.dia-b.dia);
+  const dv=ordenarItens(db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,parcela:d.parcela,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'})));
   document.getElementById('dividas').innerHTML=`
     <h2>Adicionar dívida</h2>
     <div class="card"><form data-form="divida">
@@ -266,14 +274,16 @@ function renderDividas(){
     <div class="tile warn"><p class="lbl">Quanto falta para quitar</p><p class="val2">${brl(totalDividas())}</p></div>`;
 }
 
-function mostrar(){
-  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));
-  ['home','renda','contas','dividas'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});
-}
-function atualizar(){
-  renderHome(); renderRenda(); renderContas(); renderDividas(); mostrar();
-}
-function salvarTudo(){save(); atualizar();}
+function renderHistorico(){const h=Array.isArray(db.historico)?db.historico.slice().sort((a,b)=>b.mes.localeCompare(a.mes)):[];document.getElementById('historico').innerHTML=`<h2>Histórico mensal</h2><div class="card">${h.length?h.map(m=>`<div class="item"><div class="info"><p class="nome">${esc(m.mes)}</p><p class="det">Registrado em ${dataBR(m.data)}</p></div><span class="valor">${m.itens.filter(i=>i.paga).length} pagos</span></div>`).join(''):'<p class="empty">Nenhum mês fechado ainda.</p>'}</div>`;}
+function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
+
+function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();mostrar();}
+function salvarTudo(){save();atualizar();}
+function prepararEstrutura(){if(!Array.isArray(db.historico))db.historico=[];if(!db.descontos||typeof db.descontos!=='object')db.descontos={};}
+function virarMesSeNecessario(){prepararEstrutura();const atual=mesAtual();if(!db.mesAtual){db.mesAtual=atual;return false;}if(db.mesAtual===atual)return false;db.historico.push({mes:db.mesAtual,data:hoje(),itens:[...db.contas.map(c=>({tipo:'conta',id:c.id,nome:c.nome,valor:c.valor,paga:!!c.paga})),...db.dividas.map(d=>({tipo:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,paga:!!d.paga}))]});db.contas.forEach(c=>{c.paga=false;});db.dividas.forEach(d=>{d.paga=false;});db.mesAtual=atual;return true;}
+function mesDescontado(id,mes=mesAtual()){return Array.isArray(db.descontos[id])&&db.descontos[id].includes(mes);}
+function registrarDesconto(d,mes=mesAtual()){prepararEstrutura();if(!mesDescontado(d.id,mes)){d.saldo=Math.max(0,Number(d.saldo||0)-Number(d.parcela||0));db.descontos[d.id]=[...(db.descontos[d.id]||[]),mes];}}
+function desfazerDesconto(d,mes=mesAtual()){prepararEstrutura();if(mesDescontado(d.id,mes)){d.saldo=Number(d.saldo||0)+Number(d.parcela||0);db.descontos[d.id]=db.descontos[d.id].filter(x=>x!==mes);}}
 
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-tab],[data-act]');
@@ -283,7 +293,7 @@ document.addEventListener('click',e=>{
   if(act==='toggle'){
     const lista=kind==='divida'?db.dividas:db.contas;
     const it=lista.find(x=>x.id===id);
-    if(it) it.paga=!it.paga;
+    if(it){const antes=!!it.paga;it.paga=!antes;if(kind==='divida'){if(!antes)registrarDesconto(it);else desfazerDesconto(it);}}
   } else if(act==='del'){
     if(kind==='ifood') db.ifood=db.ifood.filter(x=>x.id!==id);
     else if(kind==='divida') db.dividas=db.dividas.filter(x=>x.id!==id);
@@ -327,7 +337,7 @@ document.addEventListener('submit',e=>{
   salvarTudo();
 });
 
-atualizar();
+prepararEstrutura();atualizar();
 
 const SUPABASE_URL='https://ztmfmjdtvcdwbgqpylvv.supabase.co';
 const SUPABASE_KEY='sb_publishable_hAllLke1f4RyduYM3QvQFA_s7H6wnNP';
@@ -339,7 +349,7 @@ function hideAuth(){authBox.hidden=true;document.body.style.overflow='';}
 document.getElementById('auth-toggle').onclick=()=>{authMode=authMode==='login'?'signup':'login';document.getElementById('auth-title').textContent=authMode==='login'?'Entrar':'Criar acesso';document.getElementById('auth-submit').textContent=authMode==='login'?'Entrar':'Criar conta';document.getElementById('auth-toggle').textContent=authMode==='login'?'Primeiro acesso? Criar conta':'Já tenho uma conta: Entrar';authMsg.textContent='';};
 document.getElementById('logout').onclick=async()=>{await window.__supabaseClient.auth.signOut();showAuth();};
 authForm.onsubmit=async(e)=>{e.preventDefault();authMsg.textContent='Aguarde...';const email=document.getElementById('auth-email').value.trim(),password=document.getElementById('auth-password').value;const r=authMode==='login'?await window.__supabaseClient.auth.signInWithPassword({email,password}):await window.__supabaseClient.auth.signUp({email,password});if(r.error){authMsg.textContent=r.error.message;return;}if(authMode==='signup'&&!r.data.session){authMsg.textContent='Conta criada. Verifique o e-mail e depois entre.';return;}if(r.data.user){await boot(r.data.user);}};
-async function boot(user){window.__supabaseUser=user;const q=await window.__supabaseClient.from('couple_finance_data').select('data').eq('id','shared').maybeSingle();if(q.data&&q.data.data){db=Object.assign({},JSON.parse(JSON.stringify(vazio)),q.data.data);try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}}hideAuth();atualizar();}
+async function boot(user){window.__supabaseUser=user;const q=await window.__supabaseClient.from('couple_finance_data').select('data').eq('id','shared').maybeSingle();if(q.data&&q.data.data){db=Object.assign({},JSON.parse(JSON.stringify(vazio)),q.data.data);prepararEstrutura();if(virarMesSeNecessario())await save();try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}}hideAuth();atualizar();}
 (async()=>{const r=await window.__supabaseClient.auth.getSession();if(r.data.session) await boot(r.data.session.user); else showAuth();})();
 </script>
 
