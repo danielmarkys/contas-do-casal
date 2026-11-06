@@ -83,6 +83,25 @@ input,select{background:#101522;border-color:#303b55;color:var(--fg);border-radi
 
 @media(max-width:400px){body{padding-left:12px;padding-right:12px}.tabs{width:calc(100% - 16px);bottom:8px}.tabs button{font-size:10px}.val{font-size:32px}}
 </style>
+<style>
+/* Paleta neon suave: apenas aparência, sem alterar dados ou funções. */
+:root{--accent:#9b7cff;--line:#354268;--ok:#5ee6c0;--bad:#ff8eae;--warn:#ffd36a}
+body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparent 30%),radial-gradient(circle at 100% 38%,rgba(28,185,220,.12),transparent 28%),#0c101b}
+.card,.tile,.dash-stat,.chart-card{border-color:rgba(120,145,220,.38);box-shadow:0 12px 30px rgba(0,0,0,.24),0 0 18px rgba(100,90,220,.06)}
+.card:hover,.tile:hover,.dash-stat:hover,.chart-card:hover{border-color:rgba(157,132,255,.62)}
+.tabs{border-color:rgba(126,137,219,.55);box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 22px rgba(91,112,230,.12)}
+.tabs button[aria-pressed="true"]{background:linear-gradient(135deg,#9b7cff,#4ed8e5);box-shadow:0 0 18px rgba(117,124,255,.38)}
+.topic-icon,.dash-stat .icon{background:linear-gradient(145deg,rgba(154,121,255,.22),rgba(58,210,225,.1));border-color:rgba(169,145,255,.62);box-shadow:inset 0 0 14px rgba(122,102,235,.13),0 0 12px rgba(99,117,230,.12)}
+.topic-icon svg,.dash-stat .icon svg{filter:drop-shadow(0 0 4px rgba(154,132,255,.4))}
+.money-card{border-color:rgba(77,205,239,.6);box-shadow:0 12px 30px rgba(0,0,0,.25),0 0 22px rgba(70,174,234,.12)}
+.dash-head{border-color:rgba(151,126,255,.62);box-shadow:0 0 20px rgba(117,92,239,.12)}
+.ring,.progress-ring{filter:drop-shadow(0 0 7px rgba(121,143,255,.28))}
+.chart-track{background:#303c5d}.chart-track div{background:linear-gradient(90deg,#9b7cff,#42d9e8);box-shadow:0 0 8px rgba(74,214,235,.3)}
+.chart-row.pending .chart-track div{background:linear-gradient(90deg,#ff7f9e,#ffd166);box-shadow:0 0 8px rgba(255,180,100,.24)}
+.pill{box-shadow:0 0 9px rgba(255,196,73,.12)}
+.bad{border-color:rgba(255,115,154,.55);box-shadow:0 0 18px rgba(255,88,137,.08)}.warn{border-color:rgba(255,207,91,.5);box-shadow:0 0 18px rgba(255,190,68,.07)}.ok{border-color:rgba(72,224,190,.5)}
+.section-link,.brand-sub{color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
+</style>
 
 <div id="auth" hidden>
   <div class="auth-card">
