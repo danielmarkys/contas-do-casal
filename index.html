@@ -122,14 +122,14 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 <button type="button" data-tab="renda" aria-pressed="false">Renda</button>
 <button type="button" data-tab="contas" aria-pressed="false">Contas</button>
 <button type="button" data-tab="dividas" aria-pressed="false">Dívidas</button>
-<button type="button" data-tab="perfil" aria-pressed="false">Perfil</button>
+<button type="button" data-tab="exportar" aria-pressed="false">Exportar</button>
 </div>
 <section id="home"></section>
 <section id="renda" hidden></section>
 <section id="contas" hidden></section>
 <section id="dividas" hidden></section>
 <section id="historico" hidden></section>
-<section id="perfil" hidden></section>
+<section id="exportar" hidden></section>
 
 <script>
 const KEY='contas-casal-basico-v1';
@@ -313,9 +313,14 @@ function renderDividas(){
 
 function renderPerfil(){const p=db.perfil||{};const voce=p.voce||{nome:'Você',foto:''},esposa=p.esposa||{nome:'Sua esposa',foto:''};const avatar=(x,n)=>x.foto?`<img class="avatar" src="${esc(x.foto)}" alt="Foto de ${n}">`:`<div class="avatar">${n.slice(0,1).toUpperCase()}</div>`;document.getElementById('perfil').innerHTML=`<h2>Perfil do casal</h2><p class="sub">Personalize o espaço de vocês com nomes e fotos.</p><div class="profile-grid"><div class="profile-card">${avatar(voce,'você')}<div><strong>${esc(voce.nome||'Você')}</strong><div class="badge-line">Seu perfil</div></div><form data-form="perfil" data-slot="voce"><input name="nome" value="${esc(voce.nome||'Você')}" placeholder="Seu nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><div class="profile-card">${avatar(esposa,'sua esposa')}<div><strong>${esc(esposa.nome||'Sua esposa')}</strong><div class="badge-line">Perfil da sua esposa</div></div><form data-form="perfil" data-slot="esposa"><input name="nome" value="${esc(esposa.nome||'Sua esposa')}" placeholder="Nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><button class="btn ghost" type="button" data-tab="historico">Consultar histórico mensal</button></div>`;}
 function renderHistorico(){const h=Array.isArray(db.historico)?db.historico.slice().sort((a,b)=>b.mes.localeCompare(a.mes)):[];document.getElementById('historico').innerHTML=`<h2>Histórico mensal</h2><div class="card">${h.length?h.map(m=>`<div class="item"><div class="info"><p class="nome">${esc(m.mes)}</p><p class="det">Registrado em ${dataBR(m.data)}</p></div><span class="valor">${m.itens.filter(i=>i.paga).length} pagos</span></div>`).join(''):'<p class="empty">Nenhum mês fechado ainda.</p>'}</div>`;}
-function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico','perfil'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
+function mesesExportaveis(){return [...new Set([mesAtual(),...(db.historico||[]).map(x=>x.mes)])].sort().reverse();}
+function dadosDoMes(mes){if(mes===mesAtual())return [...db.contas.map(c=>({tipo:'Conta',nome:c.nome,valor:c.valor,paga:!!c.paga,dia:c.dia,saldo:''})),...db.dividas.map(d=>({tipo:'Dívida',nome:d.nome,valor:d.parcela,paga:!!d.paga,dia:d.dia,saldo:d.saldo}))];const h=(db.historico||[]).find(x=>x.mes===mes);return h?h.itens.map(i=>({tipo:i.tipo==='divida'?'Dívida':'Conta',nome:i.nome,valor:i.valor,paga:!!i.paga,dia:i.dia||'',saldo:i.saldo??''})):[];}
+function escCsv(v){return '"'+String(v??'').replace(/"/g,'""')+'"';}
+function baixarMes(mes){const itens=dadosDoMes(mes),linhas=[['Tipo','Nome','Valor','Pago','Dia de vencimento','Saldo devedor'],...itens.map(i=>[i.tipo,i.nome,brl(i.valor),i.paga?'Sim':'Não',i.dia,i.saldo=== ''?'':brl(i.saldo)])];const csv='\\ufeff'+linhas.map(l=>l.map(escCsv).join(';')).join('\\r\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='contas-do-casal-'+mes+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function renderExportar(){const meses=mesesExportaveis();document.getElementById('exportar').innerHTML=`<h2>Exportar mês</h2><p class="sub">Baixe uma planilha compatível com Excel e Google Planilhas para guardar o fechamento do casal.</p><div class="card"><label class="campo">Escolha o mês<select id="export-mes">${meses.map(m=>`<option value="${m}">${m}${m===mesAtual()?' (mês atual)':''}</option>`).join('')}</select></label><button class="btn" type="button" data-act="exportar">Baixar planilha do mês</button></div><div class="tile ok"><p class="lbl">O arquivo inclui</p><p class="sub">Contas, dívidas, valores, situação de pagamento, vencimentos e saldo devedor quando disponível.</p></div>`;}
+function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico','exportar'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
 
-function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();renderPerfil();mostrar();}
+function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();renderExportar();mostrar();}
 function salvarTudo(){save();atualizar();}
 function prepararEstrutura(){if(!Array.isArray(db.historico))db.historico=[];if(!db.descontos||typeof db.descontos!=='object')db.descontos={};}
 function virarMesSeNecessario(){prepararEstrutura();const atual=mesAtual();if(!db.mesAtual){db.mesAtual=atual;return false;}if(db.mesAtual===atual)return false;db.historico.push({mes:db.mesAtual,data:hoje(),itens:[...db.contas.map(c=>({tipo:'conta',id:c.id,nome:c.nome,valor:c.valor,paga:!!c.paga})),...db.dividas.map(d=>({tipo:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,paga:!!d.paga}))]});db.contas.forEach(c=>{c.paga=false;});db.dividas.forEach(d=>{d.paga=false;});db.mesAtual=atual;return true;}
@@ -343,6 +348,9 @@ document.addEventListener('click',e=>{
     if(!armado){armado=true; atualizar(); return;}
     db=JSON.parse(JSON.stringify(vazio));
     armado=false;
+  } else if(act==='exportar'){
+    baixarMes(document.getElementById('export-mes').value);
+    return;
   }
   salvarTudo();
 });
