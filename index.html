@@ -250,6 +250,7 @@ function renderHome(){
 }
 
 function renderRenda(){
+  const rendaCasal=Number(db.salario||0)+Number(db.esposa||0);
   document.getElementById('renda').innerHTML=`
     <h2>Entradas</h2>
     <div class="card"><form data-form="config">
@@ -257,10 +258,11 @@ function renderRenda(){
       <input id="f-sal" name="salario" inputmode="decimal" value="${db.salario||''}" placeholder="Ex.: 1518">
       <label class="lbl" for="f-esp">Renda da esposa (R$)</label>
       <input id="f-esp" name="esposa" inputmode="decimal" value="${db.esposa||''}" placeholder="Ex.: 1800">
-      <label class="lbl" for="f-saldo">Dinheiro total nos bancos e carteira (R$)</label>
+      <label class="lbl" for="f-saldo">Saldo disponível hoje nos bancos e carteira (R$)</label>
       <input id="f-saldo" name="saldo" inputmode="decimal" value="${db.saldo||''}" placeholder="Ex.: 950">
       <button class="btn" type="submit">Salvar</button>
     </form></div>
+    <div class="tile ok"><p class="lbl">Renda total do casal</p><p class="val2">${brl(rendaCasal)}</p><p class="sub">Seu salário líquido + renda líquida da sua esposa. Calculado automaticamente.</p></div>
     <h2>iFood: dias rodados</h2>
     <div class="card"><form data-form="ifood">
       <label class="lbl" for="f-data">Dia</label>
