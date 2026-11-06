@@ -230,6 +230,7 @@ function listaIfood(){
   return [...db.ifood].sort((a,b)=>b.data.localeCompare(a.data)).map(r=>`<div class="item">
     <div class="info"><p class="nome">${dataBR(r.data)}</p><p class="det">Rodou ${brl(r.bruto)} · moto ${brl(r.moto)}</p></div>
     <span class="valor">${brl(r.bruto-r.moto)}</span>
+    <button class="btn ghost small" type="button" data-act="editar-ifood" data-id="${r.id}">Editar</button>
     <button class="del" type="button" data-act="del" data-kind="ifood" data-id="${r.id}" aria-label="Apagar">Apagar</button>
   </div>`).join('');
 }
@@ -237,11 +238,11 @@ function listaIfood(){
 function itemIcon(i){const n=String(i.nome||'').toLowerCase();if(n.includes('moto')||n.includes('carro'))return '<svg viewBox="0 0 24 24"><path d="M5 16a3 3 0 1 0 0 1m14-1a3 3 0 1 0 0 1M8 16h8l-2-6h-3l-2 3h5M6 10h4"/></svg>';if(n.includes('ração')||n.includes('comida')||n.includes('mercado'))return '<svg viewBox="0 0 24 24"><path d="M6 4v7m3-7v7m-1.5-7v16M15 4v16m0-9c2-1 3-3 3-7"/></svg>';return '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M7 9h10M8 14h2"/></svg>';}
 function miniFoto(slot,fallback){const x=db.perfil&&db.perfil[slot];return x&&x.foto?`<img class="brand-avatar" src="${esc(x.foto)}" alt="">`:`<div class="brand-avatar">${fallback}</div>`;}
 function renderHome(){
-  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;
+  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood;
   const proximosHtml=proximos.length?proximos.map(i=>`<div class="next-row"><div class="topic-icon">${itemIcon(i)}</div><div><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${classePrazo(i.dia)}">${prazo(i.dia)}</span> ${brl(i.valor)}</p></div><span class="valor">${brl(i.valor)}</span><span class="next-arrow">›</span></div>`).join(''):'<p class="empty ok">Tudo pago neste mês</p>';
   document.getElementById('home').innerHTML=`
     <div class="app-brand"><div class="brand-mark"><div class="brand-hearts">♡♡</div><div><div class="brand-name">Contas do casal</div><div class="brand-sub">Juntos por grandes planos</div></div></div>${miniFoto('voce','V')}</div>
-    <div class="card money-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M7 10h10M8 15h3"/></svg></div><div class="money-copy"><p class="lbl">Renda total do casal</p><p class="val">${brl(db.saldo)}</p><p class="sub">Seu salário líquido + renda líquida da sua esposa.</p></div><div class="money-side">Juntos<br>vamos mais longe<br><strong>♥</strong></div></div>
+    <div class="card money-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M7 10h10M8 15h3"/></svg></div><div class="money-copy"><p class="lbl">Renda total do mês</p><p class="val">${brl(rendaTotal)}</p><p class="sub">Salários do casal: ${brl(salarios)} · iFood líquido: ${brl(ifood)}</p></div><div class="money-side">Juntos<br>vamos mais longe<br><strong>♥</strong></div></div>
     <div class="card next-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></div><h2>Próximos vencimentos</h2><span class="section-link">Ver todos →</span></div>${proximosHtml}</div>
     <div class="grid2"><div class="tile bad metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16v1"/></svg></div><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p><p class="sub">Contas que vencem neste mês.</p></div><div class="tile warn metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="6" ry="3"/><path d="M6 7v5c0 2 12 2 12 0V7M6 12v5c0 2 12 2 12 0v-5"/></svg></div><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar.</p></div></div>
     <div class="card progress-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m15 9 4-4M17 5h2v2"/></svg></div><h2>Progresso do mês</h2><span class="section-link">Até o fim do mês ›</span></div><div class="progress-layout"><div class="progress-ring" style="--progress:${percentual}%"><b>${percentual}%</b></div><div class="progress-copy"><strong>${brl(pagos)} pagos</strong><p>de ${brl(total)} previstos</p><div class="bar"><div style="width:${percentual}%"></div></div><div class="trophy-note">🏆 Mandaram bem! ${percentual}% das contas já foram pagas.</div></div></div></div>
@@ -351,6 +352,14 @@ document.addEventListener('click',e=>{
   } else if(act==='exportar'){
     baixarMes(document.getElementById('export-mes').value);
     return;
+  } else if(act==='editar-ifood'){
+    const r=db.ifood.find(x=>x.id===id);
+    if(r){
+      const data=window.prompt('Data (AAAA-MM-DD):',r.data); if(data===null)return;
+      const bruto=window.prompt('Valor rodado (R$):',String(r.bruto)); if(bruto===null)return;
+      const moto=window.prompt('Gasto com a moto (R$):',String(r.moto)); if(moto===null)return;
+      r.data=data||r.data; r.bruto=num(bruto); r.moto=num(moto);
+    }
   }
   salvarTudo();
 });
