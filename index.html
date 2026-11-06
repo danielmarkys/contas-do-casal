@@ -63,6 +63,21 @@ input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line)
 select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);width:100%}
 @media (max-width:400px){.item{gap:7px}.item .info{flex:1 1 120px;min-width:0}.item .valor{flex-basis:100%;text-align:right;margin-left:0;padding-right:2px}.item .det{line-height:1.35}.tabs button{flex-basis:calc(33.333% - 6px)}}
 </style>
+<style>
+:root{--bg:#0d1018;--card:#171c29;--fg:#f4f7ff;--muted:#8993aa;--line:#293247;--accent:#8b5cf6;--on-accent:#fff;--ok:#36d399;--ok-bg:#123d38;--bad:#fb7185;--bad-bg:#421e32;--warn:#fbbf24;--warn-bg:#493719}
+body{max-width:560px;background:radial-gradient(circle at 90% 0%,#242044 0,#0d1018 38%);min-height:100vh;padding-top:24px;padding-bottom:96px}
+h1{font-size:26px;letter-spacing:-.5px;margin:0 0 18px}h2{font-size:17px;letter-spacing:.1px}
+.tabs{position:fixed;z-index:5;left:50%;bottom:10px;transform:translateX(-50%);width:min(calc(100% - 20px),540px);padding:8px;border:1px solid #303a54;border-radius:22px;background:rgba(23,28,41,.94);backdrop-filter:blur(16px);box-shadow:0 14px 40px rgba(0,0,0,.4);gap:4px;flex-wrap:nowrap}
+.tabs button{border:0;background:transparent;color:var(--muted);border-radius:16px;padding:9px 3px;font-size:11px;white-space:nowrap}.tabs button[aria-pressed="true"]{background:linear-gradient(135deg,#8b5cf6,#5b8cff);color:#fff;box-shadow:0 5px 16px rgba(123,92,246,.35)}
+.card,.tile{border:1px solid #293247;background:linear-gradient(145deg,rgba(30,37,55,.96),rgba(18,23,35,.96));box-shadow:0 12px 28px rgba(0,0,0,.18);border-radius:20px}.card{padding:16px}.tile{padding:16px}
+.val{font-size:36px;letter-spacing:-1px}.val2{font-size:21px}.lbl{color:#a8b2c8}.sub{color:#7f8aa1}
+.grid2{gap:12px}.bad{background:linear-gradient(145deg,#4b233d,#2b1b31);color:#ff9bb0}.warn{background:linear-gradient(145deg,#4d3b1b,#2e281d);color:#ffd76b}.soon{background:#4a3b18;color:#ffd76b}.ok{background:linear-gradient(145deg,#123e3b,#172d35);color:#6ee7b7}
+.item{padding:14px 0;border-bottom-color:#293247}.item.paid{background:linear-gradient(90deg,rgba(54,211,153,.16),transparent);padding:12px;border-radius:14px}.item .nome{font-size:16px}.item .valor{font-size:17px}.pill{font-weight:600}.bar{height:9px;background:#293247}.bar div{background:linear-gradient(90deg,#8b5cf6,#37d5c0);border-radius:9px}
+.btn{background:linear-gradient(135deg,#8b5cf6,#5b8cff);border-radius:13px;box-shadow:0 7px 18px rgba(108,91,220,.25)}.btn.ghost{border-color:#35405b;background:transparent;color:#b9a8ff;box-shadow:none}
+input,select{background:#101522;border-color:#303b55;color:var(--fg);border-radius:13px}.campo{color:#a8b2c8}
+.profile-grid{display:grid;gap:12px}.profile-card{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;padding:14px;border:1px solid #303b55;border-radius:18px;background:rgba(17,22,34,.72)}.avatar{width:64px;height:64px;border-radius:20px;object-fit:cover;background:linear-gradient(135deg,#8b5cf6,#37d5c0);display:grid;place-items:center;font-size:24px;font-weight:700;color:#fff}.profile-card form{grid-column:1/-1;margin:0}.profile-card .btn{font-size:13px;padding:9px 10px}.badge-line{display:flex;align-items:center;gap:8px;color:#a8b2c8;font-size:13px}
+@media(max-width:400px){body{padding-left:12px;padding-right:12px}.tabs{width:calc(100% - 16px);bottom:8px}.tabs button{font-size:10px}.val{font-size:32px}}
+</style>
 
 <div id="auth" hidden>
   <div class="auth-card">
@@ -83,17 +98,18 @@ select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line
 <button type="button" data-tab="renda" aria-pressed="false">Renda</button>
 <button type="button" data-tab="contas" aria-pressed="false">Contas</button>
 <button type="button" data-tab="dividas" aria-pressed="false">Dívidas</button>
-<button type="button" data-tab="historico" aria-pressed="false">Histórico</button>
+<button type="button" data-tab="perfil" aria-pressed="false">Perfil</button>
 </div>
 <section id="home"></section>
 <section id="renda" hidden></section>
 <section id="contas" hidden></section>
 <section id="dividas" hidden></section>
 <section id="historico" hidden></section>
+<section id="perfil" hidden></section>
 
 <script>
 const KEY='contas-casal-basico-v1';
-const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[],historico:[],mesAtual:'',descontos:{}};
+const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[],historico:[],mesAtual:'',descontos:{},perfil:{voce:{nome:'Você',foto:''},esposa:{nome:'Sua esposa',foto:''}}};
 let db=load();
 let armado=false;
 let aba='home';
@@ -274,10 +290,11 @@ function renderDividas(){
     <div class="tile warn"><p class="lbl">Quanto falta para quitar</p><p class="val2">${brl(totalDividas())}</p></div>`;
 }
 
+function renderPerfil(){const p=db.perfil||{};const voce=p.voce||{nome:'Você',foto:''},esposa=p.esposa||{nome:'Sua esposa',foto:''};const avatar=(x,n)=>x.foto?`<img class="avatar" src="${esc(x.foto)}" alt="Foto de ${n}">`:`<div class="avatar">${n.slice(0,1).toUpperCase()}</div>`;document.getElementById('perfil').innerHTML=`<h2>Perfil do casal</h2><p class="sub">Personalize o espaço de vocês com nomes e fotos.</p><div class="profile-grid"><div class="profile-card">${avatar(voce,'você')}<div><strong>${esc(voce.nome||'Você')}</strong><div class="badge-line">Seu perfil</div></div><form data-form="perfil" data-slot="voce"><input name="nome" value="${esc(voce.nome||'Você')}" placeholder="Seu nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><div class="profile-card">${avatar(esposa,'sua esposa')}<div><strong>${esc(esposa.nome||'Sua esposa')}</strong><div class="badge-line">Perfil da sua esposa</div></div><form data-form="perfil" data-slot="esposa"><input name="nome" value="${esc(esposa.nome||'Sua esposa')}" placeholder="Nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><button class="btn ghost" type="button" data-tab="historico">Consultar histórico mensal</button></div>`;}
 function renderHistorico(){const h=Array.isArray(db.historico)?db.historico.slice().sort((a,b)=>b.mes.localeCompare(a.mes)):[];document.getElementById('historico').innerHTML=`<h2>Histórico mensal</h2><div class="card">${h.length?h.map(m=>`<div class="item"><div class="info"><p class="nome">${esc(m.mes)}</p><p class="det">Registrado em ${dataBR(m.data)}</p></div><span class="valor">${m.itens.filter(i=>i.paga).length} pagos</span></div>`).join(''):'<p class="empty">Nenhum mês fechado ainda.</p>'}</div>`;}
-function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
+function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico','perfil'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
 
-function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();mostrar();}
+function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();renderPerfil();mostrar();}
 function salvarTudo(){save();atualizar();}
 function prepararEstrutura(){if(!Array.isArray(db.historico))db.historico=[];if(!db.descontos||typeof db.descontos!=='object')db.descontos={};}
 function virarMesSeNecessario(){prepararEstrutura();const atual=mesAtual();if(!db.mesAtual){db.mesAtual=atual;return false;}if(db.mesAtual===atual)return false;db.historico.push({mes:db.mesAtual,data:hoje(),itens:[...db.contas.map(c=>({tipo:'conta',id:c.id,nome:c.nome,valor:c.valor,paga:!!c.paga})),...db.dividas.map(d=>({tipo:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,paga:!!d.paga}))]});db.contas.forEach(c=>{c.paga=false;});db.dividas.forEach(d=>{d.paga=false;});db.mesAtual=atual;return true;}
@@ -309,12 +326,14 @@ document.addEventListener('click',e=>{
   salvarTudo();
 });
 
-document.addEventListener('submit',e=>{
+document.addEventListener('submit',async e=>{
   e.preventDefault();
   const f=e.target;
   const d=new FormData(f);
   const tipo=f.dataset.form;
-  if(tipo==='config'){
+  if(tipo==='perfil'){
+    prepararEstrutura();if(!db.perfil)db.perfil={voce:{nome:'Você',foto:''},esposa:{nome:'Sua esposa',foto:''}};const slot=String(f.dataset.slot);const atual=db.perfil[slot]||{nome:'',foto:''};atual.nome=String(d.get('nome')||atual.nome).trim()||atual.nome;const arquivo=d.get('foto');if(arquivo&&arquivo.name&&window.__supabaseClient&&window.__supabaseUser){const path=window.__supabaseUser.id+'/'+slot+'-'+Date.now()+'.'+(arquivo.name.split('.').pop()||'jpg');const up=await window.__supabaseClient.storage.from('couple-profile').upload(path,arquivo,{upsert:true,contentType:arquivo.type||'image/jpeg'});if(up.error){alert('Não foi possível enviar a foto agora.');return;}atual.foto=window.__supabaseClient.storage.from('couple-profile').getPublicUrl(path).data.publicUrl;}db.perfil[slot]=atual;
+  } else if(tipo==='config'){
     db.salario=num(d.get('salario'));
     db.esposa=num(d.get('esposa'));
     db.saldo=num(d.get('saldo'));
