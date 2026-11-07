@@ -101,6 +101,8 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 .pill{box-shadow:0 0 9px rgba(255,196,73,.12)}
 .bad{border-color:rgba(255,115,154,.55);box-shadow:0 0 18px rgba(255,88,137,.08)}.warn{border-color:rgba(255,207,91,.5);box-shadow:0 0 18px rgba(255,190,68,.07)}.ok{border-color:rgba(72,224,190,.5)}
 .section-link,.brand-sub{color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
+.link-button{border:0;background:none;padding:0;font:inherit;cursor:pointer;color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
+.forecast-card{display:flex;align-items:center;gap:14px;padding:16px 18px}.forecast-card.positive{border-color:rgba(73,230,186,.62);box-shadow:0 0 22px rgba(73,230,186,.1)}.forecast-card.negative{border-color:rgba(255,105,145,.68);box-shadow:0 0 22px rgba(255,105,145,.13)}.forecast-card.neutral{border-color:rgba(255,211,106,.62)}.forecast-symbol{font-size:33px;font-weight:800;line-height:1}.forecast-card.positive .forecast-symbol{color:#5ee6c0;text-shadow:0 0 10px rgba(94,230,192,.55)}.forecast-card.negative .forecast-symbol{color:#ff8eae;text-shadow:0 0 10px rgba(255,142,174,.55)}.forecast-card.neutral .forecast-symbol{color:#ffd36a}.forecast-value{font-size:25px;font-weight:800}.forecast-card.positive .forecast-value{color:#5ee6c0}.forecast-card.negative .forecast-value{color:#ff8eae}.forecast-card.neutral .forecast-value{color:#ffd36a}
 </style>
 
 <div id="auth" hidden>
@@ -238,16 +240,17 @@ function listaIfood(){
 function itemIcon(i){const n=String(i.nome||'').toLowerCase();if(n.includes('moto')||n.includes('carro'))return '<svg viewBox="0 0 24 24"><path d="M5 16a3 3 0 1 0 0 1m14-1a3 3 0 1 0 0 1M8 16h8l-2-6h-3l-2 3h5M6 10h4"/></svg>';if(n.includes('ração')||n.includes('comida')||n.includes('mercado'))return '<svg viewBox="0 0 24 24"><path d="M6 4v7m3-7v7m-1.5-7v16M15 4v16m0-9c2-1 3-3 3-7"/></svg>';return '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M7 9h10M8 14h2"/></svg>';}
 function miniFoto(slot,fallback){const x=db.perfil&&db.perfil[slot];return x&&x.foto?`<img class="brand-avatar" src="${esc(x.foto)}" alt="">`:`<div class="brand-avatar">${fallback}</div>`;}
 function renderHome(){
-  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood;
+  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood,saldoPrevisto=rendaTotal-falta(),forecastState=saldoPrevisto>0?'positive':saldoPrevisto<0?'negative':'neutral',forecastSymbol=saldoPrevisto>0?'＋':saldoPrevisto<0?'−':'＝',forecastText=saldoPrevisto<0?`Atenção: faltam ${brl(Math.abs(saldoPrevisto))} para cobrir os compromissos.`:saldoPrevisto>0?'Vocês estão dentro do orçamento do mês.':'A renda cobre exatamente os compromissos do mês.';
   const proximosHtml=proximos.length?proximos.map(i=>`<div class="next-row"><div class="topic-icon">${itemIcon(i)}</div><div><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${classePrazo(i.dia)}">${prazo(i.dia)}</span> ${brl(i.valor)}</p></div><span class="valor">${brl(i.valor)}</span><span class="next-arrow">›</span></div>`).join(''):'<p class="empty ok">Tudo pago neste mês</p>';
   document.getElementById('home').innerHTML=`
     <div class="app-brand"><div class="brand-mark"><div class="brand-hearts">♡♡</div><div><div class="brand-name">Contas do casal</div><div class="brand-sub">Juntos por grandes planos</div></div></div>${miniFoto('voce','V')}</div>
     <div class="card money-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M7 10h10M8 15h3"/></svg></div><div class="money-copy"><p class="lbl">Renda total do mês</p><p class="val">${brl(rendaTotal)}</p><p class="sub">Salários do casal: ${brl(salarios)} · iFood líquido: ${brl(ifood)}</p></div><div class="money-side">Juntos<br>vamos mais longe<br><strong>♥</strong></div></div>
-    <div class="card next-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></div><h2>Próximos vencimentos</h2><span class="section-link">Ver todos →</span></div>${proximosHtml}</div>
+    <div class="card next-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></div><h2>Próximos vencimentos</h2><button class="section-link link-button" type="button" data-act="ver-todos">Ver todos →</button></div>${proximosHtml}</div>
+    <div class="card forecast-card ${forecastState}"><div class="forecast-symbol">${forecastSymbol}</div><div><p class="lbl">Saldo previsto após pagar tudo</p><div class="forecast-value">${saldoPrevisto<0?'− ':saldoPrevisto>0?'＋ ':''}${brl(Math.abs(saldoPrevisto))}</div><p class="sub">${forecastText}</p></div></div>
     <div class="grid2"><div class="tile bad metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16v1"/></svg></div><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p><p class="sub">Contas que vencem neste mês.</p></div><div class="tile warn metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="6" ry="3"/><path d="M6 7v5c0 2 12 2 12 0V7M6 12v5c0 2 12 2 12 0v-5"/></svg></div><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar.</p></div></div>
     <div class="card progress-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m15 9 4-4M17 5h2v2"/></svg></div><h2>Progresso do mês</h2><span class="section-link">Até o fim do mês ›</span></div><div class="progress-layout"><div class="progress-ring" style="--progress:${percentual}%"><b>${percentual}%</b></div><div class="progress-copy"><strong>${brl(pagos)} pagos</strong><p>de ${brl(total)} previstos</p><div class="bar"><div style="width:${percentual}%"></div></div><div class="trophy-note">🏆 Mandaram bem! ${percentual}% das contas já foram pagas.</div></div></div></div>
     <div class="card"><div class="row between"><span class="lbl">Parcelas mensais</span><strong>${brl(parcelasMensais())}</strong></div><div class="row between" style="margin-top:8px"><span class="lbl">Parcelas anuais cadastradas</span><strong>${brl(parcelasAnuais())}</strong></div><p class="sub">No orçamento mensal entram somente as dívidas marcadas como mensais.</p></div>
-    <h2>Contas e parcelas do mês</h2><div class="card">${lista.length?lista.map(linha).join(''):'<p class="empty">Nenhuma conta cadastrada ainda.</p>'}</div>`;
+    <h2 id="todas-contas">Contas e parcelas do mês</h2><div class="card">${lista.length?lista.map(linha).join(''):'<p class="empty">Nenhuma conta cadastrada ainda.</p>'}</div>`;
 }
 
 function renderRenda(){
@@ -360,6 +363,9 @@ document.addEventListener('click',e=>{
       const moto=window.prompt('Gasto com a moto (R$):',String(r.moto)); if(moto===null)return;
       r.data=data||r.data; r.bruto=num(bruto); r.moto=num(moto);
     }
+  } else if(act==='ver-todos'){
+    document.getElementById('todas-contas')?.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
   }
   salvarTudo();
 });
