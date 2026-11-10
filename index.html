@@ -103,6 +103,7 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 .section-link,.brand-sub{color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
 .link-button{border:0;background:none;padding:0;font:inherit;cursor:pointer;color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
 .forecast-card{display:flex;align-items:center;gap:14px;padding:16px 18px}.forecast-card.positive{border-color:rgba(73,230,186,.62);box-shadow:0 0 22px rgba(73,230,186,.1)}.forecast-card.negative{border-color:rgba(255,105,145,.68);box-shadow:0 0 22px rgba(255,105,145,.13)}.forecast-card.neutral{border-color:rgba(255,211,106,.62)}.forecast-symbol{font-size:33px;font-weight:800;line-height:1}.forecast-card.positive .forecast-symbol{color:#5ee6c0;text-shadow:0 0 10px rgba(94,230,192,.55)}.forecast-card.negative .forecast-symbol{color:#ff8eae;text-shadow:0 0 10px rgba(255,142,174,.55)}.forecast-card.neutral .forecast-symbol{color:#ffd36a}.forecast-value{font-size:25px;font-weight:800}.forecast-card.positive .forecast-value{color:#5ee6c0}.forecast-card.negative .forecast-value{color:#ff8eae}.forecast-card.neutral .forecast-value{color:#ffd36a}
+.pay-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}.pay-modal[hidden]{display:none}.pay-dialog{width:min(100%,380px);padding:20px;border:1px solid rgba(155,124,255,.65);border-radius:20px;background:linear-gradient(145deg,#202844,#141a29);box-shadow:0 16px 50px rgba(0,0,0,.5),0 0 25px rgba(125,105,255,.18)}.pay-dialog h2{margin:0 0 5px}.pay-dialog p{margin:0 0 14px;color:#a8b2c8;font-size:13px}.pay-dialog .modal-actions{display:flex;gap:8px;margin-top:14px}.pay-dialog .modal-actions button{flex:1}
 </style>
 
 <div id="auth" hidden>
@@ -132,6 +133,14 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 <section id="dividas" hidden></section>
 <section id="historico" hidden></section>
 <section id="exportar" hidden></section>
+<div id="pay-modal" class="pay-modal" hidden>
+  <div class="pay-dialog" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
+    <h2 id="pay-modal-title">Registrar pagamento</h2>
+    <p id="pay-modal-copy"></p>
+    <label class="campo">Valor pago (R$)<input id="pay-modal-value" inputmode="decimal" autocomplete="off"></label>
+    <div class="modal-actions"><button class="btn ghost" type="button" id="pay-cancel">Cancelar</button><button class="btn" type="button" id="pay-confirm">Confirmar</button></div>
+  </div>
+</div>
 
 <script>
 const KEY='contas-casal-basico-v1';
@@ -186,7 +195,9 @@ function totalDividas(){return db.dividas.reduce((s,d)=>s+d.saldo,0);}
 function parcelasDividasMes(){return db.dividas.reduce((s,d)=>s+d.parcela,0);}
 function ifoodLiquido(){return db.ifood.reduce((s,r)=>s+(r.bruto-r.moto),0);}
 function rendaRecebida(){return db.salario+db.esposa+ifoodLiquido();}
-function sobra(){return rendaRecebida()-totalMes();}
+function sobra(){return rendaRecebida()-totalMes()-jurosMes();}
+function jurosMes(){return [...db.contas,...db.dividas].reduce((s,i)=>s+(i.paga?Number(i.juros||0):0),0);}
+function sobraReal(){return rendaRecebida()-totalMes()-jurosMes();}
 function pctPago(){const t=totalMes();return t?Math.round((t-falta())/t*100):0;}
 function progressoDivida(d){
   const total=d.total||d.saldo||0;
@@ -199,10 +210,10 @@ function status(i){if(i.paga)return ['Paga','ok'];return [prazo(i.dia),classePra
 
 function linha(i){
   const st=status(i);
-  const det=i.kind==='divida'?'Saldo devedor '+brl(i.saldo):'Conta do mês';
+  const pagamento=i.paga&&i.valorPago!=null?`Pago ${brl(i.valorPago)} de ${brl(i.valor)}${Number(i.juros||0)>0?` (juros ${brl(i.juros)})`:Number(i.valorPago)<Number(i.valor)?` (abaixo do previsto em ${brl(Number(i.valor)-Number(i.valorPago))})`:''}`:(i.kind==='divida'?'Saldo devedor '+brl(i.saldo):'Conta do mês');
   return `<div class="item ${i.paga?'paid':''}">
     <button class="pagar ${i.paga?'on':''}" type="button" data-act="toggle" data-kind="${i.kind}" data-id="${i.id}" aria-pressed="${i.paga}"><span class="box">${i.paga?'✓':''}</span>Pago</button>
-    <div class="info"><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${det}</p></div>
+    <div class="info"><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p></div>
     <span class="valor">${brl(i.valor)}</span>
     <button class="del" type="button" data-act="del" data-kind="${i.kind}" data-id="${i.id}" aria-label="Apagar">Apagar</button>
   </div>`;
@@ -211,9 +222,10 @@ function linha(i){
 function linhaDivida(d){
   const st=status({paga:d.paga,dia:d.dia});
   const p=progressoDivida(d);
+  const pagamento=d.paga&&d.valorPago!=null?`Pago ${brl(d.valorPago)} de ${brl(d.parcela)}${Number(d.juros||0)>0?` (juros ${brl(d.juros)})`:Number(d.valorPago)<Number(d.parcela)?` (abaixo do previsto em ${brl(Number(d.parcela)-Number(d.valorPago))})`:''}`:`Parcela ${brl(d.parcela)} · ${d.periodicidade==='anual'?'anual':'mensal'}`;
   return `<div class="item ${d.paga?'paid':''}">
     <button class="pagar ${d.paga?'on':''}" type="button" data-act="toggle" data-kind="divida" data-id="${d.id}" aria-pressed="${d.paga}"><span class="box">${d.paga?'✓':''}</span>Pago</button>
-    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>Parcela ${brl(d.parcela)} · ${d.periodicidade==='anual'?'anual':'mensal'}</p></div>
+    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p></div>
     <button class="del" type="button" data-act="del" data-kind="divida" data-id="${d.id}" aria-label="Apagar">Apagar</button>
     <div style="width:100%;margin-top:8px">
       <div class="topo"><span>Já pagou ${p.pct}% de ${brl(p.total)}</span><span>Falta ${brl(d.saldo)}</span></div>
@@ -240,7 +252,7 @@ function listaIfood(){
 function itemIcon(i){const n=String(i.nome||'').toLowerCase();if(n.includes('moto')||n.includes('carro'))return '<svg viewBox="0 0 24 24"><path d="M5 16a3 3 0 1 0 0 1m14-1a3 3 0 1 0 0 1M8 16h8l-2-6h-3l-2 3h5M6 10h4"/></svg>';if(n.includes('ração')||n.includes('comida')||n.includes('mercado'))return '<svg viewBox="0 0 24 24"><path d="M6 4v7m3-7v7m-1.5-7v16M15 4v16m0-9c2-1 3-3 3-7"/></svg>';return '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M7 9h10M8 14h2"/></svg>';}
 function miniFoto(slot,fallback){const x=db.perfil&&db.perfil[slot];return x&&x.foto?`<img class="brand-avatar" src="${esc(x.foto)}" alt="">`:`<div class="brand-avatar">${fallback}</div>`;}
 function renderHome(){
-  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood,saldoPrevisto=rendaTotal-falta(),forecastState=saldoPrevisto>0?'positive':saldoPrevisto<0?'negative':'neutral',forecastSymbol=saldoPrevisto>0?'＋':saldoPrevisto<0?'−':'＝',forecastText=saldoPrevisto<0?`Atenção: faltam ${brl(Math.abs(saldoPrevisto))} para cobrir os compromissos.`:saldoPrevisto>0?'Vocês estão dentro do orçamento do mês.':'A renda cobre exatamente os compromissos do mês.';
+  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood,juros=jurosMes(),saldoPrevisto=rendaTotal-falta()-juros,forecastState=saldoPrevisto>0?'positive':saldoPrevisto<0?'negative':'neutral',forecastSymbol=saldoPrevisto>0?'＋':saldoPrevisto<0?'−':'＝',forecastText=saldoPrevisto<0?`Atenção: faltam ${brl(Math.abs(saldoPrevisto))} para cobrir os compromissos.`:saldoPrevisto>0?'Vocês estão dentro do orçamento do mês.':'A renda cobre exatamente os compromissos do mês.';
   const proximosHtml=proximos.length?proximos.map(i=>`<div class="next-row"><div class="topic-icon">${itemIcon(i)}</div><div><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${classePrazo(i.dia)}">${prazo(i.dia)}</span> ${brl(i.valor)}</p></div><span class="valor">${brl(i.valor)}</span><span class="next-arrow">›</span></div>`).join(''):'<p class="empty ok">Tudo pago neste mês</p>';
   document.getElementById('home').innerHTML=`
     <div class="app-brand"><div class="brand-mark"><div class="brand-hearts">♡♡</div><div><div class="brand-name">Contas do casal</div><div class="brand-sub">Juntos por grandes planos</div></div></div>${miniFoto('voce','V')}</div>
@@ -248,6 +260,7 @@ function renderHome(){
     <div class="card next-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></div><h2>Próximos vencimentos</h2><button class="section-link link-button" type="button" data-act="ver-todos">Ver todos →</button></div>${proximosHtml}</div>
     <div class="card forecast-card ${forecastState}"><div class="forecast-symbol">${forecastSymbol}</div><div><p class="lbl">Saldo previsto após pagar tudo</p><div class="forecast-value">${saldoPrevisto<0?'− ':saldoPrevisto>0?'＋ ':''}${brl(Math.abs(saldoPrevisto))}</div><p class="sub">${forecastText}</p></div></div>
     <div class="grid2"><div class="tile bad metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16v1"/></svg></div><p class="lbl">Falta pagar no mês</p><p class="val2">${brl(falta())}</p><p class="sub">Contas que vencem neste mês.</p></div><div class="tile warn metric-card"><div class="topic-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="6" ry="3"/><path d="M6 7v5c0 2 12 2 12 0V7M6 12v5c0 2 12 2 12 0v-5"/></svg></div><p class="lbl">Dívida total restante</p><p class="val2">${brl(totalDividas())}</p><p class="sub">Valor total que ainda falta quitar.</p></div></div>
+    <div class="card"><div class="row between"><span class="lbl">Juros pagos no mês</span><strong>${brl(juros)}</strong></div><div class="row between" style="margin-top:8px"><span class="lbl">Sobra real do mês</span><strong class="${sobraReal()<0?'bad':''}">${brl(sobraReal())}</strong></div><p class="sub">A sobra considera o valor realmente pago; a falta pagar e o progresso usam o valor previsto.</p></div>
     <div class="card progress-card"><div class="section-head"><div class="topic-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m15 9 4-4M17 5h2v2"/></svg></div><h2>Progresso do mês</h2><span class="section-link">Até o fim do mês ›</span></div><div class="progress-layout"><div class="progress-ring" style="--progress:${percentual}%"><b>${percentual}%</b></div><div class="progress-copy"><strong>${brl(pagos)} pagos</strong><p>de ${brl(total)} previstos</p><div class="bar"><div style="width:${percentual}%"></div></div><div class="trophy-note">🏆 Mandaram bem! ${percentual}% das contas já foram pagas.</div></div></div></div>
     <div class="card"><div class="row between"><span class="lbl">Parcelas mensais</span><strong>${brl(parcelasMensais())}</strong></div><div class="row between" style="margin-top:8px"><span class="lbl">Parcelas anuais cadastradas</span><strong>${brl(parcelasAnuais())}</strong></div><p class="sub">No orçamento mensal entram somente as dívidas marcadas como mensais.</p></div>
     <h2 id="todas-contas">Contas e parcelas do mês</h2><div class="card">${lista.length?lista.map(linha).join(''):'<p class="empty">Nenhuma conta cadastrada ainda.</p>'}</div>`;
@@ -316,23 +329,24 @@ function renderDividas(){
 }
 
 function renderPerfil(){const p=db.perfil||{};const voce=p.voce||{nome:'Você',foto:''},esposa=p.esposa||{nome:'Sua esposa',foto:''};const avatar=(x,n)=>x.foto?`<img class="avatar" src="${esc(x.foto)}" alt="Foto de ${n}">`:`<div class="avatar">${n.slice(0,1).toUpperCase()}</div>`;document.getElementById('perfil').innerHTML=`<h2>Perfil do casal</h2><p class="sub">Personalize o espaço de vocês com nomes e fotos.</p><div class="profile-grid"><div class="profile-card">${avatar(voce,'você')}<div><strong>${esc(voce.nome||'Você')}</strong><div class="badge-line">Seu perfil</div></div><form data-form="perfil" data-slot="voce"><input name="nome" value="${esc(voce.nome||'Você')}" placeholder="Seu nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><div class="profile-card">${avatar(esposa,'sua esposa')}<div><strong>${esc(esposa.nome||'Sua esposa')}</strong><div class="badge-line">Perfil da sua esposa</div></div><form data-form="perfil" data-slot="esposa"><input name="nome" value="${esc(esposa.nome||'Sua esposa')}" placeholder="Nome ou apelido"><input name="foto" type="file" accept="image/*"><button class="btn small" type="submit">Alterar foto e nome</button></form></div><button class="btn ghost" type="button" data-tab="historico">Consultar histórico mensal</button></div>`;}
-function renderHistorico(){const h=Array.isArray(db.historico)?db.historico.slice().sort((a,b)=>b.mes.localeCompare(a.mes)):[];document.getElementById('historico').innerHTML=`<h2>Histórico mensal</h2><div class="card">${h.length?h.map(m=>`<div class="item"><div class="info"><p class="nome">${esc(m.mes)}</p><p class="det">Registrado em ${dataBR(m.data)}</p></div><span class="valor">${m.itens.filter(i=>i.paga).length} pagos</span></div>`).join(''):'<p class="empty">Nenhum mês fechado ainda.</p>'}</div>`;}
+function renderHistorico(){const h=Array.isArray(db.historico)?db.historico.slice().sort((a,b)=>b.mes.localeCompare(a.mes)):[];document.getElementById('historico').innerHTML=`<h2>Histórico mensal</h2><div class="card">${h.length?h.map(m=>`<div class="item"><div class="info"><p class="nome">${esc(m.mes)}</p><p class="det">Registrado em ${dataBR(m.data)} · Juros pagos ${brl(m.itens.reduce((s,i)=>s+Number(i.juros||0),0))}</p></div><span class="valor">${m.itens.filter(i=>i.paga).length} pagos</span></div>`).join(''):'<p class="empty">Nenhum mês fechado ainda.</p>'}</div>`;}
 function mesesExportaveis(){return [...new Set([mesAtual(),...(db.historico||[]).map(x=>x.mes)])].sort().reverse();}
-function dadosDoMes(mes){if(mes===mesAtual())return [...db.contas.map(c=>({tipo:'Conta',nome:c.nome,valor:c.valor,paga:!!c.paga,dia:c.dia,saldo:''})),...db.dividas.map(d=>({tipo:'Dívida',nome:d.nome,valor:d.parcela,paga:!!d.paga,dia:d.dia,saldo:d.saldo}))];const h=(db.historico||[]).find(x=>x.mes===mes);return h?h.itens.map(i=>({tipo:i.tipo==='divida'?'Dívida':'Conta',nome:i.nome,valor:i.valor,paga:!!i.paga,dia:i.dia||'',saldo:i.saldo??''})):[];}
+function dadosDoMes(mes){if(mes===mesAtual())return [...db.contas.map(c=>({tipo:'Conta',nome:c.nome,valor:c.valor,valorPago:c.valorPago??'',juros:c.juros||0,paga:!!c.paga,dia:c.dia,saldo:''})),...db.dividas.map(d=>({tipo:'Dívida',nome:d.nome,valor:d.parcela,valorPago:d.valorPago??'',juros:d.juros||0,paga:!!d.paga,dia:d.dia,saldo:d.saldo}))];const h=(db.historico||[]).find(x=>x.mes===mes);return h?h.itens.map(i=>({tipo:i.tipo==='divida'?'Dívida':'Conta',nome:i.nome,valor:i.valor,valorPago:i.valorPago??'',juros:i.juros||0,paga:!!i.paga,dia:i.dia||'',saldo:i.saldo??''})):[];}
 function escCsv(v){return '"'+String(v??'').replace(/"/g,'""')+'"';}
-function baixarMes(mes){const itens=dadosDoMes(mes),linhas=[['Tipo','Nome','Valor','Pago','Dia de vencimento','Saldo devedor'],...itens.map(i=>[i.tipo,i.nome,brl(i.valor),i.paga?'Sim':'Não',i.dia,i.saldo=== ''?'':brl(i.saldo)])];const csv='\\ufeff'+linhas.map(l=>l.map(escCsv).join(';')).join('\\r\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='contas-do-casal-'+mes+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function baixarMes(mes){const itens=dadosDoMes(mes),linhas=[['Tipo','Nome','Valor previsto','Valor pago','Juros','Pago','Dia de vencimento','Saldo devedor'],...itens.map(i=>[i.tipo,i.nome,brl(i.valor),i.valorPago===''?'':brl(i.valorPago),brl(i.juros),i.paga?'Sim':'Não',i.dia,i.saldo=== ''?'':brl(i.saldo)])];const csv='\\ufeff'+linhas.map(l=>l.map(escCsv).join(';')).join('\\r\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='contas-do-casal-'+mes+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 function renderExportar(){const meses=mesesExportaveis();document.getElementById('exportar').innerHTML=`<h2>Exportar mês</h2><p class="sub">Baixe uma planilha compatível com Excel e Google Planilhas para guardar o fechamento do casal.</p><div class="card"><label class="campo">Escolha o mês<select id="export-mes">${meses.map(m=>`<option value="${m}">${m}${m===mesAtual()?' (mês atual)':''}</option>`).join('')}</select></label><button class="btn" type="button" data-act="exportar">Baixar planilha do mês</button></div><div class="tile ok"><p class="lbl">O arquivo inclui</p><p class="sub">Contas, dívidas, valores, situação de pagamento, vencimentos e saldo devedor quando disponível.</p></div>`;}
 function mostrar(){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===aba)));['home','renda','contas','dividas','historico','exportar'].forEach(id=>{document.getElementById(id).hidden=(id!==aba);});}
 
 function atualizar(){renderHome();renderRenda();renderContas();renderDividas();renderHistorico();renderExportar();mostrar();}
 function salvarTudo(){save();atualizar();}
 function prepararEstrutura(){if(!Array.isArray(db.historico))db.historico=[];if(!db.descontos||typeof db.descontos!=='object')db.descontos={};}
-function virarMesSeNecessario(){prepararEstrutura();const atual=mesAtual();if(!db.mesAtual){db.mesAtual=atual;return false;}if(db.mesAtual===atual)return false;db.historico.push({mes:db.mesAtual,data:hoje(),itens:[...db.contas.map(c=>({tipo:'conta',id:c.id,nome:c.nome,valor:c.valor,paga:!!c.paga})),...db.dividas.map(d=>({tipo:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,paga:!!d.paga}))]});db.contas.forEach(c=>{c.paga=false;});db.dividas.forEach(d=>{d.paga=false;});db.mesAtual=atual;return true;}
+function virarMesSeNecessario(){prepararEstrutura();const atual=mesAtual();if(!db.mesAtual){db.mesAtual=atual;return false;}if(db.mesAtual===atual)return false;db.historico.push({mes:db.mesAtual,data:hoje(),itens:[...db.contas.map(c=>({tipo:'conta',id:c.id,nome:c.nome,valor:c.valor,valorPago:c.valorPago??'',juros:c.juros||0,paga:!!c.paga})),...db.dividas.map(d=>({tipo:'divida',id:d.id,nome:d.nome,valor:d.parcela,valorPago:d.valorPago??'',juros:d.juros||0,saldo:d.saldo,paga:!!d.paga}))]});[...db.contas,...db.dividas].forEach(i=>{i.paga=false;delete i.valorPago;delete i.juros;delete i.mesPagamento;});db.mesAtual=atual;return true;}
 function mesDescontado(id,mes=mesAtual()){return Array.isArray(db.descontos[id])&&db.descontos[id].includes(mes);}
 function registrarDesconto(d,mes=mesAtual()){prepararEstrutura();if(!mesDescontado(d.id,mes)){d.saldo=Math.max(0,Number(d.saldo||0)-Number(d.parcela||0));db.descontos[d.id]=[...(db.descontos[d.id]||[]),mes];}}
 function desfazerDesconto(d,mes=mesAtual()){prepararEstrutura();if(mesDescontado(d.id,mes)){d.saldo=Number(d.saldo||0)+Number(d.parcela||0);db.descontos[d.id]=db.descontos[d.id].filter(x=>x!==mes);}}
+function pedirValorPago(nome,previsto){return new Promise(resolve=>{const modal=document.getElementById('pay-modal'),input=document.getElementById('pay-modal-value');document.getElementById('pay-modal-title').textContent='Registrar pagamento';document.getElementById('pay-modal-copy').textContent=`${nome} · previsto ${brl(previsto)}`;input.value=String(previsto);modal.hidden=false;input.focus();const fechar=valor=>{modal.hidden=true;document.getElementById('pay-cancel').onclick=null;document.getElementById('pay-confirm').onclick=null;resolve(valor);};document.getElementById('pay-cancel').onclick=()=>fechar(null);document.getElementById('pay-confirm').onclick=()=>fechar(num(input.value));input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fechar(num(input.value));}if(e.key==='Escape')fechar(null);};});}
 
-document.addEventListener('click',e=>{
+document.addEventListener('click',async e=>{
   const t=e.target.closest('[data-tab],[data-act]');
   if(!t) return;
   if(t.dataset.tab){aba=t.dataset.tab; armado=false; mostrar(); return;}
@@ -340,7 +354,7 @@ document.addEventListener('click',e=>{
   if(act==='toggle'){
     const lista=kind==='divida'?db.dividas:db.contas;
     const it=lista.find(x=>x.id===id);
-    if(it){const antes=!!it.paga;it.paga=!antes;if(kind==='divida'){if(!antes)registrarDesconto(it);else desfazerDesconto(it);}}
+    if(it){const antes=!!it.paga;if(!antes){const previsto=kind==='divida'?Number(it.parcela||0):Number(it.valor||0);const pago=await pedirValorPago(it.nome,previsto);if(pago===null)return;it.valorPago=pago;it.juros=Math.max(0,pago-previsto);it.mesPagamento=mesAtual();it.paga=true;if(kind==='divida')registrarDesconto(it);}else{it.paga=false;delete it.valorPago;delete it.juros;delete it.mesPagamento;if(kind==='divida')desfazerDesconto(it);}}
   } else if(act==='del'){
     if(kind==='ifood') db.ifood=db.ifood.filter(x=>x.id!==id);
     else if(kind==='divida') db.dividas=db.dividas.filter(x=>x.id!==id);
