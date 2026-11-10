@@ -198,7 +198,8 @@ function ifoodLiquido(){return db.ifood.reduce((s,r)=>s+(r.bruto-r.moto),0);}
 function rendaRecebida(){return db.salario+db.esposa+ifoodLiquido();}
 function sobra(){return rendaRecebida()-totalMes()-jurosMes();}
 function jurosMes(){return [...db.contas,...db.dividas].reduce((s,i)=>s+(i.paga?Number(i.juros||0):0),0);}
-function sobraReal(){return rendaRecebida()-totalMes()-jurosMes();}
+function gastoRealMes(){return [...db.contas,...db.dividas].reduce((s,i)=>{if(i.periodicidade==='anual')return s;const previsto=i.parcela!=null?i.parcela:i.valor;return s+(i.paga&&i.valorPago!=null?Number(i.valorPago):Number(previsto||0));},0);}
+function sobraReal(){return rendaRecebida()-gastoRealMes();}
 function pctPago(){const t=totalMes();return t?Math.round((t-falta())/t*100):0;}
 function progressoDivida(d){
   const total=d.total||d.saldo||0;
@@ -260,7 +261,7 @@ function listaIfood(){
 function itemIcon(i){const n=String(i.nome||'').toLowerCase();if(n.includes('moto')||n.includes('carro'))return '<svg viewBox="0 0 24 24"><path d="M5 16a3 3 0 1 0 0 1m14-1a3 3 0 1 0 0 1M8 16h8l-2-6h-3l-2 3h5M6 10h4"/></svg>';if(n.includes('ração')||n.includes('comida')||n.includes('mercado'))return '<svg viewBox="0 0 24 24"><path d="M6 4v7m3-7v7m-1.5-7v16M15 4v16m0-9c2-1 3-3 3-7"/></svg>';return '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M7 9h10M8 14h2"/></svg>';}
 function miniFoto(slot,fallback){const x=db.perfil&&db.perfil[slot];return x&&x.foto?`<img class="brand-avatar" src="${esc(x.foto)}" alt="">`:`<div class="brand-avatar">${fallback}</div>`;}
 function renderHome(){
-  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood,juros=jurosMes(),saldoPrevisto=rendaTotal-falta()-juros,forecastState=saldoPrevisto>0?'positive':saldoPrevisto<0?'negative':'neutral',forecastSymbol=saldoPrevisto>0?'＋':saldoPrevisto<0?'−':'＝',forecastText=saldoPrevisto<0?`Atenção: faltam ${brl(Math.abs(saldoPrevisto))} para cobrir os compromissos.`:saldoPrevisto>0?'Vocês estão dentro do orçamento do mês.':'A renda cobre exatamente os compromissos do mês.';
+  const lista=itens();const proximos=lista.filter(i=>!i.paga).slice(0,3);const total=totalMes(),pagos=Math.max(0,total-falta()),percentual=total?Math.round(pagos/total*100):0,pendentePct=total?Math.round(falta()/total*100):0;const salarios=Number(db.salario||0)+Number(db.esposa||0),ifood=ifoodLiquido(),rendaTotal=salarios+ifood,juros=jurosMes(),saldoPrevisto=sobraReal(),forecastState=saldoPrevisto>0?'positive':saldoPrevisto<0?'negative':'neutral',forecastSymbol=saldoPrevisto>0?'＋':saldoPrevisto<0?'−':'＝',forecastText=saldoPrevisto<0?`Atenção: faltam ${brl(Math.abs(saldoPrevisto))} para cobrir os compromissos.`:saldoPrevisto>0?'Vocês estão dentro do orçamento do mês.':'A renda cobre exatamente os compromissos do mês.';
   const proximosHtml=proximos.length?proximos.map(i=>`<div class="next-row"><div class="topic-icon">${itemIcon(i)}</div><div><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${classePrazo(i.dia)}">${prazo(i.dia)}</span> ${brl(i.valor)}</p></div><span class="valor">${brl(i.valor)}</span><span class="next-arrow">›</span></div>`).join(''):'<p class="empty ok">Tudo pago neste mês</p>';
   document.getElementById('home').innerHTML=`
     <div class="app-brand"><div class="brand-mark"><div class="brand-hearts">♡♡</div><div><div class="brand-name">Contas do casal</div><div class="brand-sub">Juntos por grandes planos</div></div></div>${miniFoto('voce','V')}</div>
