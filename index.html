@@ -104,6 +104,7 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 .link-button{border:0;background:none;padding:0;font:inherit;cursor:pointer;color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
 .forecast-card{display:flex;align-items:center;gap:14px;padding:16px 18px}.forecast-card.positive{border-color:rgba(73,230,186,.62);box-shadow:0 0 22px rgba(73,230,186,.1)}.forecast-card.negative{border-color:rgba(255,105,145,.68);box-shadow:0 0 22px rgba(255,105,145,.13)}.forecast-card.neutral{border-color:rgba(255,211,106,.62)}.forecast-symbol{font-size:33px;font-weight:800;line-height:1}.forecast-card.positive .forecast-symbol{color:#5ee6c0;text-shadow:0 0 10px rgba(94,230,192,.55)}.forecast-card.negative .forecast-symbol{color:#ff8eae;text-shadow:0 0 10px rgba(255,142,174,.55)}.forecast-card.neutral .forecast-symbol{color:#ffd36a}.forecast-value{font-size:25px;font-weight:800}.forecast-card.positive .forecast-value{color:#5ee6c0}.forecast-card.negative .forecast-value{color:#ff8eae}.forecast-card.neutral .forecast-value{color:#ffd36a}
 .pay-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}.pay-modal[hidden]{display:none}.pay-dialog{width:min(100%,380px);padding:20px;border:1px solid rgba(155,124,255,.65);border-radius:20px;background:linear-gradient(145deg,#202844,#141a29);box-shadow:0 16px 50px rgba(0,0,0,.5),0 0 25px rgba(125,105,255,.18)}.pay-dialog h2{margin:0 0 5px}.pay-dialog p{margin:0 0 14px;color:#a8b2c8;font-size:13px}.pay-dialog .modal-actions{display:flex;gap:8px;margin-top:14px}.pay-dialog .modal-actions button{flex:1}
+.payment-detail{margin:4px 0 0;color:#8fe8cf;font-size:12px;font-weight:600;overflow-wrap:anywhere}.item:not(.paid) .payment-detail{color:#8993aa}.valor.real-payment{color:#6ee7b7;text-shadow:0 0 8px rgba(78,230,192,.2)}
 </style>
 
 <div id="auth" hidden>
@@ -210,11 +211,14 @@ function status(i){if(i.paga)return ['Paga','ok'];return [prazo(i.dia),classePra
 
 function linha(i){
   const st=status(i);
-  const pagamento=i.paga&&i.valorPago!=null?`Pago ${brl(i.valorPago)} de ${brl(i.valor)}${Number(i.juros||0)>0?` (juros ${brl(i.juros)})`:Number(i.valorPago)<Number(i.valor)?` (abaixo do previsto em ${brl(Number(i.valor)-Number(i.valorPago))})`:''}`:(i.kind==='divida'?'Saldo devedor '+brl(i.saldo):'Conta do mês');
+  const temPagamento=i.paga&&i.valorPago!=null;
+  const pagamento=i.kind==='divida'?'Saldo devedor '+brl(i.saldo):'Conta do mês';
+  const detalhePagamento=temPagamento?`<p class="payment-detail">Valor original: ${brl(i.valor)}${Number(i.juros||0)>0?` · Juros: ${brl(i.juros)}`:Number(i.valorPago)<Number(i.valor)?` · Abaixo do previsto: ${brl(Number(i.valor)-Number(i.valorPago))}`:''}</p>`:'';
+  const valorExibido=temPagamento?Number(i.valorPago):Number(i.valor);
   return `<div class="item ${i.paga?'paid':''}">
     <button class="pagar ${i.paga?'on':''}" type="button" data-act="toggle" data-kind="${i.kind}" data-id="${i.id}" aria-pressed="${i.paga}"><span class="box">${i.paga?'✓':''}</span>Pago</button>
-    <div class="info"><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p></div>
-    <span class="valor">${brl(i.valor)}</span>
+    <div class="info"><p class="nome">${esc(i.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p>${detalhePagamento}</div>
+    <span class="valor ${temPagamento?'real-payment':''}">${brl(valorExibido)}</span>
     <button class="del" type="button" data-act="del" data-kind="${i.kind}" data-id="${i.id}" aria-label="Apagar">Apagar</button>
   </div>`;
 }
@@ -222,10 +226,14 @@ function linha(i){
 function linhaDivida(d){
   const st=status({paga:d.paga,dia:d.dia});
   const p=progressoDivida(d);
-  const pagamento=d.paga&&d.valorPago!=null?`Pago ${brl(d.valorPago)} de ${brl(d.parcela)}${Number(d.juros||0)>0?` (juros ${brl(d.juros)})`:Number(d.valorPago)<Number(d.parcela)?` (abaixo do previsto em ${brl(Number(d.parcela)-Number(d.valorPago))})`:''}`:`Parcela ${brl(d.parcela)} · ${d.periodicidade==='anual'?'anual':'mensal'}`;
+  const temPagamento=d.paga&&d.valorPago!=null;
+  const pagamento=`Parcela ${brl(d.parcela)} · ${d.periodicidade==='anual'?'anual':'mensal'}`;
+  const detalhePagamento=temPagamento?`<p class="payment-detail">Valor original: ${brl(d.parcela)}${Number(d.juros||0)>0?` · Juros: ${brl(d.juros)}`:Number(d.valorPago)<Number(d.parcela)?` · Abaixo do previsto: ${brl(Number(d.parcela)-Number(d.valorPago))}`:''}</p>`:'';
+  const valorExibido=temPagamento?Number(d.valorPago):Number(d.parcela);
   return `<div class="item ${d.paga?'paid':''}">
     <button class="pagar ${d.paga?'on':''}" type="button" data-act="toggle" data-kind="divida" data-id="${d.id}" aria-pressed="${d.paga}"><span class="box">${d.paga?'✓':''}</span>Pago</button>
-    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p></div>
+    <div class="info"><p class="nome">${esc(d.nome)}</p><p class="det"><span class="pill ${st[1]}">${st[0]}</span>${pagamento}</p>${detalhePagamento}</div>
+    <span class="valor ${temPagamento?'real-payment':''}">${brl(valorExibido)}</span>
     <button class="del" type="button" data-act="del" data-kind="divida" data-id="${d.id}" aria-label="Apagar">Apagar</button>
     <div style="width:100%;margin-top:8px">
       <div class="topo"><span>Já pagou ${p.pct}% de ${brl(p.total)}</span><span>Falta ${brl(d.saldo)}</span></div>
