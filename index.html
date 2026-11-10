@@ -184,8 +184,8 @@ function classePrazo(dia){const diff=diaVencimento(dia)-diaHoje();if(diff<0)retu
 function ordenarItens(lista){return lista.slice().sort((a,b)=>{if(!!a.paga!==!!b.paga)return a.paga?1:-1;const da=diaVencimento(a.dia)-diaHoje(),dbb=diaVencimento(b.dia)-diaHoje();return da-dbb||String(a.nome).localeCompare(String(b.nome),'pt-BR');});}
 function itens(){
   return ordenarItens([
-    ...db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})),
-    ...db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'}))
+    ...db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,valorPago:c.valorPago,juros:c.juros,dia:c.dia,paga:!!c.paga})),
+    ...db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,valorPago:d.valorPago,juros:d.juros,saldo:d.saldo,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'}))
   ]);
 }
 function totalMes(){return itens().reduce((s,i)=>s+(i.kind==='divida'&&i.periodicidade==='anual'?0:i.valor),0);}
@@ -304,7 +304,7 @@ function renderRenda(){
 }
 
 function renderContas(){
-  const contas=ordenarItens(db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,dia:c.dia,paga:!!c.paga})));
+  const contas=ordenarItens(db.contas.map(c=>({kind:'conta',id:c.id,nome:c.nome,valor:c.valor,valorPago:c.valorPago,juros:c.juros,dia:c.dia,paga:!!c.paga})));
   document.getElementById('contas').innerHTML=`
     <h2>Adicionar conta</h2>
     <div class="card"><form data-form="conta">
@@ -319,7 +319,7 @@ function renderContas(){
 }
 
 function renderDividas(){
-  const dv=ordenarItens(db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,saldo:d.saldo,parcela:d.parcela,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'})));
+  const dv=ordenarItens(db.dividas.map(d=>({kind:'divida',id:d.id,nome:d.nome,valor:d.parcela,valorPago:d.valorPago,juros:d.juros,saldo:d.saldo,parcela:d.parcela,dia:d.dia,paga:!!d.paga,periodicidade:d.periodicidade||'mensal'})));
   document.getElementById('dividas').innerHTML=`
     <h2>Adicionar dívida</h2>
     <div class="card"><form data-form="divida">
