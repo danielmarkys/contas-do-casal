@@ -83,8 +83,8 @@ input,select{background:#101522;border-color:#303b55;color:var(--fg);border-radi
 
 @media(max-width:400px){body{padding-left:12px;padding-right:12px}.tabs{width:calc(100% - 16px);bottom:8px}.tabs button{font-size:10px}.val{font-size:32px}}
 @media(min-width:760px){body{max-width:760px;margin-left:220px;margin-right:24px}.tabs{left:18px;top:50%;bottom:auto;transform:translateY(-50%);width:180px;flex-direction:column;align-items:stretch;padding:10px;border-radius:22px}.tabs button{width:100%;padding:13px 14px;text-align:left;font-size:14px}}
-.sidebar-toggle{display:none}.menu-backdrop{display:none}.sidebar-toggle.menu-hidden{opacity:0;pointer-events:none;transform:translateY(-8px) scale(.92)}
-@media(max-width:759px){.sidebar-toggle{display:inline-flex;align-items:center;justify-content:center;position:fixed;z-index:8;top:16px;left:14px;width:42px;height:42px;border:1px solid rgba(169,145,255,.62);border-radius:14px;background:rgba(23,28,41,.94);color:#b8a4ff;font-size:23px;cursor:pointer;box-shadow:0 0 16px rgba(99,117,230,.18);transition:opacity .22s ease,transform .22s ease,box-shadow .22s ease} body{padding-top:70px}.tabs{left:-245px;top:0;bottom:0;transform:none;width:225px;height:100vh;padding:74px 12px 18px;border-radius:0 24px 24px 0;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;transition:left .22s ease;box-shadow:12px 0 40px rgba(0,0,0,.45)}.tabs.open{left:0}.tabs button{flex:none;width:100%;padding:13px 14px;text-align:left;font-size:14px}.menu-backdrop{display:block;position:fixed;inset:0;z-index:4;background:rgba(3,6,14,.58);backdrop-filter:blur(3px)}.menu-backdrop[hidden]{display:none}}
+.sidebar-toggle{display:none}.menu-backdrop{display:none}.sidebar-toggle.menu-hidden{opacity:0;pointer-events:none;transform:translateY(-8px) scale(.92)}.menu-toggle-label{font-size:14px;font-weight:700;letter-spacing:.2px}
+@media(max-width:759px){.sidebar-toggle{display:inline-flex;align-items:center;justify-content:center;position:fixed;z-index:8;top:16px;left:14px;min-width:78px;width:auto;height:42px;padding:0 11px;gap:7px;border:1px solid rgba(169,145,255,.62);border-radius:14px;background:rgba(23,28,41,.94);color:#b8a4ff;font-size:23px;cursor:pointer;box-shadow:0 0 16px rgba(99,117,230,.18);transition:opacity .22s ease,transform .22s ease,box-shadow .22s ease} body{padding-top:70px}.tabs{left:-245px;top:0;bottom:0;transform:none;width:225px;height:100vh;padding:74px 12px 18px;border-radius:0 24px 24px 0;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;transition:left .22s ease;box-shadow:12px 0 40px rgba(0,0,0,.45)}.tabs.open{left:0}.tabs button{flex:none;width:100%;padding:13px 14px;text-align:left;font-size:14px}.menu-backdrop{display:block;position:fixed;inset:0;z-index:4;background:rgba(3,6,14,.58);backdrop-filter:blur(3px)}.menu-backdrop[hidden]{display:none}}
 </style>
 <style>
 /* Paleta neon suave: apenas aparência, sem alterar dados ou funções. */
@@ -151,7 +151,7 @@ body{color:#fff}h1,h2,h3,strong,.lbl,.nome,button,label{font-weight:650;color:#f
     <div class="auth-links"><button type="button" id="auth-toggle">Primeiro acesso? Criar conta</button></div>
   </div>
 </div>
-<button class="sidebar-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+<button class="sidebar-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰ <span class="menu-toggle-label">Menu</span></button>
 <h1>Contas do casal <button class="btn ghost small" id="logout" type="button">Sair</button></h1>
 <div id="menu-backdrop" class="menu-backdrop" hidden></div>
 <nav class="tabs" aria-label="Menu principal">
