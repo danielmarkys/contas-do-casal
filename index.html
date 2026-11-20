@@ -82,6 +82,7 @@ input,select{background:#101522;border-color:#303b55;color:var(--fg);border-radi
 @media(max-width:400px){.money-card{grid-template-columns:44px 1fr}.money-side{display:none}.progress-layout{grid-template-columns:100px 1fr;gap:11px}.progress-ring{width:98px;height:98px}.progress-ring b{font-size:22px}.next-row{grid-template-columns:38px 1fr auto 12px;gap:7px}.next-row .topic-icon{width:36px;height:36px}}
 
 @media(max-width:400px){body{padding-left:12px;padding-right:12px}.tabs{width:calc(100% - 16px);bottom:8px}.tabs button{font-size:10px}.val{font-size:32px}}
+@media(min-width:760px){body{max-width:760px;margin-left:220px;margin-right:24px}.tabs{left:18px;top:50%;bottom:auto;transform:translateY(-50%);width:180px;flex-direction:column;align-items:stretch;padding:10px;border-radius:22px}.tabs button{width:100%;padding:13px 14px;text-align:left;font-size:14px}}
 </style>
 <style>
 /* Paleta neon suave: apenas aparência, sem alterar dados ou funções. */
@@ -122,13 +123,13 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
   </div>
 </div>
 <h1>Contas do casal <button class="btn ghost small" id="logout" type="button">Sair</button></h1>
-<div class="tabs">
+<nav class="tabs" aria-label="Menu principal">
 <button type="button" data-tab="home" aria-pressed="true">Início</button>
 <button type="button" data-tab="renda" aria-pressed="false">Renda</button>
 <button type="button" data-tab="contas" aria-pressed="false">Contas</button>
 <button type="button" data-tab="dividas" aria-pressed="false">Dívidas</button>
 <button type="button" data-tab="exportar" aria-pressed="false">Exportar</button>
-</div>
+</nav>
 <section id="home"></section>
 <section id="renda" hidden></section>
 <section id="contas" hidden></section>
