@@ -105,6 +105,7 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 .link-button{border:0;background:none;padding:0;font:inherit;cursor:pointer;color:#b8a4ff;text-shadow:0 0 8px rgba(173,143,255,.22)}
 .forecast-card{display:flex;align-items:center;gap:14px;padding:16px 18px}.forecast-card.positive{border-color:rgba(73,230,186,.62);box-shadow:0 0 22px rgba(73,230,186,.1)}.forecast-card.negative{border-color:rgba(255,105,145,.68);box-shadow:0 0 22px rgba(255,105,145,.13)}.forecast-card.neutral{border-color:rgba(255,211,106,.62)}.forecast-symbol{font-size:33px;font-weight:800;line-height:1}.forecast-card.positive .forecast-symbol{color:#5ee6c0;text-shadow:0 0 10px rgba(94,230,192,.55)}.forecast-card.negative .forecast-symbol{color:#ff8eae;text-shadow:0 0 10px rgba(255,142,174,.55)}.forecast-card.neutral .forecast-symbol{color:#ffd36a}.forecast-value{font-size:25px;font-weight:800}.forecast-card.positive .forecast-value{color:#5ee6c0}.forecast-card.negative .forecast-value{color:#ff8eae}.forecast-card.neutral .forecast-value{color:#ffd36a}
 .balance-grid{display:grid;gap:10px;margin-bottom:10px}.balance-card{display:flex;align-items:center;gap:14px}.balance-card .forecast-value{margin-top:2px}.balance-card .sub{max-width:46ch}.balance-card.positive{border-color:rgba(73,230,186,.62);box-shadow:0 0 22px rgba(73,230,186,.1)}.balance-card.negative{border-color:rgba(255,105,145,.68);box-shadow:0 0 22px rgba(255,105,145,.13)}.balance-card.positive .forecast-symbol{color:#5ee6c0;text-shadow:0 0 10px rgba(94,230,192,.55)}.balance-card.negative .forecast-symbol{color:#ff8eae;text-shadow:0 0 10px rgba(255,142,174,.55)}.balance-card.positive .forecast-value{color:#5ee6c0}.balance-card.negative .forecast-value{color:#ff8eae}
+.income-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.income-card{padding:14px;border-radius:18px;border:1px solid rgba(155,124,255,.48);background:linear-gradient(145deg,rgba(38,30,76,.72),rgba(18,24,38,.9));box-shadow:0 0 16px rgba(120,100,230,.1)}.income-card .income-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.income-card .income-head strong{flex:1}.income-card input[type=color]{width:34px;height:30px;padding:2px;cursor:pointer}.income-card .val2{font-size:20px}@media(max-width:400px){.income-grid{grid-template-columns:1fr}}
 .pay-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}.pay-modal[hidden]{display:none}.pay-dialog{width:min(100%,380px);padding:20px;border:1px solid rgba(155,124,255,.65);border-radius:20px;background:linear-gradient(145deg,#202844,#141a29);box-shadow:0 16px 50px rgba(0,0,0,.5),0 0 25px rgba(125,105,255,.18)}.pay-dialog h2{margin:0 0 5px}.pay-dialog p{margin:0 0 14px;color:#a8b2c8;font-size:13px}.pay-dialog .modal-actions{display:flex;gap:8px;margin-top:14px}.pay-dialog .modal-actions button{flex:1}
 .payment-detail{margin:4px 0 0;color:#8fe8cf;font-size:12px;font-weight:600;overflow-wrap:anywhere}.item:not(.paid) .payment-detail{color:#8993aa}.valor.real-payment{color:#6ee7b7;text-shadow:0 0 8px rgba(78,230,192,.2)}
 </style>
@@ -147,7 +148,7 @@ body{background:radial-gradient(circle at 10% 0%,rgba(111,84,210,.24),transparen
 
 <script>
 const KEY='contas-casal-basico-v1';
-const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[],historico:[],mesAtual:'',descontos:{},perfil:{voce:{nome:'Você',foto:''},esposa:{nome:'Sua esposa',foto:''}}};
+const vazio={salario:0,esposa:0,saldo:0,contas:[],dividas:[],ifood:[],historico:[],mesAtual:'',descontos:{},nomesRenda:{daniel:'Renda Daniel',mila:'Renda Mila'},coresRenda:{daniel:'#9b7cff',mila:'#4ed8e5'},perfil:{voce:{nome:'Você',foto:''},esposa:{nome:'Sua esposa',foto:''}}};
 let db=load();
 let armado=false;
 let aba='home';
@@ -280,17 +281,12 @@ function renderHome(){
 
 function renderRenda(){
   const rendaCasal=Number(db.salario||0)+Number(db.esposa||0);
+  const nomes=db.nomesRenda||{daniel:'Renda Daniel',mila:'Renda Mila'},cores=db.coresRenda||{daniel:'#9b7cff',mila:'#4ed8e5'};
   document.getElementById('renda').innerHTML=`
     <h2>Entradas</h2>
-    <div class="card"><form data-form="config">
-      <label class="lbl" for="f-sal">Seu salário líquido (R$)</label>
-      <input id="f-sal" name="salario" inputmode="decimal" value="${db.salario||''}" placeholder="Ex.: 1518">
-      <label class="lbl" for="f-esp">Renda da esposa (R$)</label>
-      <input id="f-esp" name="esposa" inputmode="decimal" value="${db.esposa||''}" placeholder="Ex.: 1800">
-      <button class="btn" type="submit">Salvar</button>
-    </form></div>
+    <form data-form="config"><div class="income-grid"><div class="income-card" style="border-color:${esc(cores.daniel)}"><div class="income-head"><strong>${esc(nomes.daniel)}</strong><input type="color" name="corDaniel" value="${esc(cores.daniel)}" title="Cor do card"></div><label class="campo">Nome<input name="nomeDaniel" value="${esc(nomes.daniel)}" required></label><label class="campo">Valor mensal (R$)<input name="salario" inputmode="decimal" value="${db.salario||''}" placeholder="Ex.: 1518"></label></div><div class="income-card" style="border-color:${esc(cores.mila)}"><div class="income-head"><strong>${esc(nomes.mila)}</strong><input type="color" name="corMila" value="${esc(cores.mila)}" title="Cor do card"></div><label class="campo">Nome<input name="nomeMila" value="${esc(nomes.mila)}" required></label><label class="campo">Valor mensal (R$)<input name="esposa" inputmode="decimal" value="${db.esposa||''}" placeholder="Ex.: 1800"></label></div></div><button class="btn" type="submit" style="margin-top:10px">Salvar rendas</button></form>
     <div class="tile ok"><p class="lbl">Renda total do casal</p><p class="val2">${brl(rendaCasal)}</p><p class="sub">Seu salário líquido + renda líquida da sua esposa. Calculado automaticamente.</p></div>
-    <h2>iFood: dias rodados</h2>
+    <h2>Renda variável</h2>
     <div class="card"><form data-form="ifood">
       <label class="lbl" for="f-data">Dia</label>
       <input id="f-data" name="data" type="date" value="${hoje()}" required>
@@ -407,6 +403,8 @@ document.addEventListener('submit',async e=>{
     db.salario=num(d.get('salario'));
     db.esposa=num(d.get('esposa'));
     db.saldo=db.salario+db.esposa;
+    db.nomesRenda={daniel:String(d.get('nomeDaniel')||'Renda Daniel').trim()||'Renda Daniel',mila:String(d.get('nomeMila')||'Renda Mila').trim()||'Renda Mila'};
+    db.coresRenda={daniel:String(d.get('corDaniel')||'#9b7cff'),mila:String(d.get('corMila')||'#4ed8e5')};
   } else if(tipo==='ifood'){
     db.ifood.push({id:uid(),data:String(d.get('data')||hoje()),bruto:num(d.get('bruto')),moto:num(d.get('moto'))});
   } else if(tipo==='conta'){
